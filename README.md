@@ -1,6 +1,13 @@
+![Ubuntu](https://img.shields.io/badge/Ubuntu-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)
+![GitLab](https://img.shields.io/badge/gitlab-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
+
+![Python](https://img.shields.io/badge/python-v3.8+-blue.svg)
+[![security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
+
 HỆ THỐNG QUẢN TRỊ DỰ ÁN CHIẾN LƯỢC (DNU-PROJECT ENTERPRISE)
 
-📝 Giới thiệu dự án
+#📝 Giới thiệu dự án
 
 Hệ thống được xây dựng để quản trị dự án. Dựa trên nền tảng Odoo, hệ thống cung cấp các công cụ điều hành chuyên sâu, tích hợp đa module giữa Nhân sự (HRM) và Thư viện công việc.
 
@@ -18,63 +25,63 @@ Theo dõi KPI tự động: Hệ thống tự động tính toán % hoàn thành
 
 Báo cáo BI đa chiều: Phân tích dữ liệu qua các góc nhìn Pivot, Graph, Kanban và Calendar.
 
-🚀 Hướng dẫn cài đặt và khởi tạo môi trường
+#🚀 Hướng dẫn cài đặt và khởi tạo môi trường
 
-1. Cài đặt công cụ và thư viện hệ thống
+##1. Cài đặt công cụ và thư viện hệ thống
 
 Người sử dụng thực thi lệnh sau trên Ubuntu để cài đặt các thư viện cần thiết:
 
-sudo apt-get update
+```sudo apt-get update
 sudo apt-get install libxml2-dev libxslt-dev libldap2-dev libsasl2-dev libssl-dev \
 python3.10-distutils python3.10-dev build-essential libffi-dev zlib1g-dev \
-python3.10-venv libpq-dev
+python3.10-venv libpq-dev```
 
 
-2. Tải mã nguồn dự án
+##2. Tải mã nguồn dự án
 
 Thực hiện clone mã nguồn từ GitHub:
 
 git clone [https://github.com/hopmini/ProjectManage-TaskManage.git](https://github.com/hopmini/ProjectManage-TaskManage.git)
-cd ProjectManage-TaskManage
+`cd ProjectManage-TaskManage`
 
 
-3. Khởi tạo môi trường ảo (Virtual Environment)
+##3. Khởi tạo môi trường ảo (Virtual Environment)
 
-python3.10 -m venv ./venv
+```python3.10 -m venv ./venv
 source venv/bin/activate
-pip3 install -r requirements.txt
+pip3 install -r requirements.txt```
 
 
-4. Thiết lập Cơ sở dữ liệu (Docker)
+##4. Thiết lập Cơ sở dữ liệu (Docker)
 
 Khởi tạo PostgreSQL server bằng Docker Compose:
 
-docker-compose up -d
+`docker-compose up -d`
 
 
-⚙️ Cấu hình vận hành
+#⚙️ Cấu hình vận hành
 
-1. Khởi tạo tệp odoo.conf
+##1. Khởi tạo tệp odoo.conf
 
 Tạo tệp cấu hình để hệ thống nhận diện các phân hệ:
 
-[options]
+```[options]
 addons_path = addons, odoo/addons
 db_host = localhost
 db_password = odoo
 db_user = odoo
 db_port = 5432
-xmlrpc_port = 8069
+xmlrpc_port = 8069```
 
 
-2. Lệnh khởi chạy và cập nhật
+##2. Lệnh khởi chạy và cập nhật
 
 Sử dụng lệnh sau để nâng cấp module và chạy hệ thống:
 
 python3 odoo-bin.py -c odoo.conf -u all 
 
 
-🛠 Kiến trúc hệ thống
+#🛠 Kiến trúc hệ thống
 
 Hệ thống tuân thủ kiến trúc Enterprise 4 tầng:
 
@@ -86,7 +93,7 @@ Lớp tích hợp (Cross-module): Kết nối module quan_ly_nhan_su và quan_ly
 
 Lớp dữ liệu (PostgreSQL): Lưu trữ và bảo mật dữ liệu cấp doanh nghiệp.
 
-🔗 Thông tin mã nguồn
+#🔗 Thông tin mã nguồn
 
 GitHub Repository: ProjectManage-TaskManage
 
