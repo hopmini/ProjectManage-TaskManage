@@ -1,0 +1,36 @@
+<odoo>
+    <record id="action_nhan_vien" model="ir.actions.act_window">
+        <field name="name">Nhân Viên</field>
+        <field name="res_model">quan_ly.nhan_vien</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="action_don_vi" model="ir.actions.act_window">
+        <field name="name">Đơn Vị</field>
+        <field name="res_model">quan_ly.don_vi</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="action_cham_cong" model="ir.actions.act_window">
+        <field name="name">Chấm Công</field>
+        <field name="res_model">quan_ly.cham_cong</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record id="action_tinh_luong" model="ir.actions.act_window">
+        <field name="name">Bảng Lương</field>
+        <field name="res_model">quan_ly.tinh_luong</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_quan_ly_nhan_su_root" name="Quản Lý Nhân Sự" sequence="10"/>
+
+    <menuitem id="menu_ho_so" name="Hồ Sơ" parent="menu_quan_ly_nhan_su_root" sequence="1"/>
+    <menuitem id="menu_nghiep_vu" name="Nghiệp Vụ" parent="menu_quan_ly_nhan_su_root" sequence="2"/>
+
+    <menuitem id="menu_nhan_vien" parent="menu_ho_so" action="action_nhan_vien" sequence="1"/>
+    <menuitem id="menu_don_vi" parent="menu_ho_so" action="action_don_vi" sequence="2"/>
+    
+    <menuitem id="menu_cham_cong" parent="menu_nghiep_vu" action="action_cham_cong" sequence="1"/>
+    <menuitem id="menu_tinh_luong" parent="menu_nghiep_vu" action="action_tinh_luong" sequence="2"/>
+</odoo>

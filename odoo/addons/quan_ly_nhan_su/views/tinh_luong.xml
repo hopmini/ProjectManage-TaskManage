@@ -1,0 +1,68 @@
+<odoo>
+    <record id="view_tinh_luong_form" model="ir.ui.view">
+        <field name="name">tinh.luong.form</field>
+        <field name="model">quan_ly.tinh_luong</field>
+        <field name="arch" type="xml">
+            <form>
+                <header></header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Thông tin chung">
+                            <field name="nhan_vien_id"/>
+                            <field name="thang"/>
+                            <field name="nam"/>
+                        </group>
+                        <group string="Thông số lương">
+                            <field name="luong_co_ban"/>
+                            <field name="ngay_cong_chuan"/>
+                            <field name="luong_mot_ngay" widget="monetary"/>
+                            <field name="phu_cap"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Chi tiết Chấm Công">
+                            <field name="chi_tiet_cong_ids">
+                                <tree editable="bottom" create="0" delete="0">
+                                    <field name="ngay_cham"/>
+                                    <field name="gio_vao" widget="float_time"/>
+                                    <field name="gio_ra" widget="float_time"/>
+                                    <field name="tien_thuong"/>
+                                    <field name="tien_phat"/>
+                                    <field name="trang_thai"/>
+                                </tree>
+                            </field>
+                        </page>
+                    </notebook>
+
+                    <group class="oe_subtotal_footer oe_right">
+                        <field name="so_cong_thuc_te"/>
+                        <field name="tong_thuong"/>
+                        <field name="tong_phat"/>
+                        <div class="oe_subtotal_footer_separator oe_inline">
+                            <label for="thuc_linh"/>
+                        </div>
+                        <field name="thuc_linh" nolabel="1" class="oe_subtotal_footer_separator" widget="monetary"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_tinh_luong_tree" model="ir.ui.view">
+        <field name="name">tinh.luong.tree</field>
+        <field name="model">quan_ly.tinh_luong</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="nhan_vien_id"/>
+                <field name="thang"/>
+                <field name="so_cong_thuc_te"/>
+                <field name="thuc_linh" sum="Tổng chi lương"/>
+            </tree>
+        </field>
+    </record>
+</odoo>

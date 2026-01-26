@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_quan_ly_cong_viec_tree" model="ir.ui.view">
+        <field name="name">quan_ly.cong_viec.tree</field>
+        <field name="model">quan_ly.cong_viec</field>
+        <field name="arch" type="xml">
+            <tree string="Danh mục Công việc" 
+                  decoration-info="trang_thai == 'moi'" 
+                  decoration-warning="trang_thai == 'dang_lam'" 
+                  decoration-success="trang_thai == 'hoan_thanh'" 
+                  decoration-muted="trang_thai == 'huy'">
+                <field name="ma_cong_viec"/>
+                <field name="ten_cong_viec"/>
+                <field name="nguoi_thuc_hien_id"/>
+                <field name="do_uu_tien" widget="priority"/>
+                <field name="do_kho"/>
+                <field name="han_hoan_thanh"/>
+                <field name="so_gio_du_kien" sum="Tổng giờ dự kiến"/>
+                <field name="trang_thai" widget="badge" 
+                       decoration-info="trang_thai == 'moi'" 
+                       decoration-warning="trang_thai == 'dang_lam'" 
+                       decoration-success="trang_thai == 'hoan_thanh'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_quan_ly_cong_viec_form" model="ir.ui.view">
+        <field name="name">quan_ly.cong_viec.form</field>
+        <field name="model">quan_ly.cong_viec</field>
+        <field name="arch" type="xml">
+            <form string="Chi tiết Công việc">
+                <header>
+                    <button name="action_set_doing" string="Bắt đầu làm" 
+                            type="object" class="oe_highlight" 
+                            attrs="{'invisible': [('trang_thai', '!=', 'moi')]}"/>
+                    <button name="action_set_done" string="Hoàn thành" 
+                            type="object" class="oe_highlight" 
+                            attrs="{'invisible': [('trang_thai', '!=', 'dang_lam')]}"/>
+                    <field name="trang_thai" widget="statusbar" 
+                           statusbar_visible="moi,dang_lam,hoan_thanh"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="ten_cong_viec" class="oe_edit_only"/>
+                        <h1>
+                            <field name="ten_cong_viec" placeholder="Tên công việc cụ thể..."/>
+                        </h1>
+                        <h3>
+                            <field name="ma_cong_viec" readonly="1"/>
+                        </h3>
+                    </div>
+                    <group>
+                        <group string="Phân công &amp; Phân loại">
+                            <field name="nguoi_thuc_hien_id" options="{'no_create': True, 'no_open': False}"/>
+                            <field name="do_uu_tien" widget="priority"/>
+                            <field name="do_kho" widget="radio" options="{'horizontal': true}"/>
+                        </group>
+                        <group string="Kế hoạch thời gian">
+                            <field name="ngay_bat_dau"/>
+                            <field name="han_hoan_thanh"/>
+                            <field name="so_gio_du_kien" widget="float_time"/>
+                            <field name="ngay_tao"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Mô tả công việc" name="description">
+                            <field name="mo_ta_chi_tiet" placeholder="Nhập hướng dẫn thực hiện tại đây..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_quan_ly_cong_viec_search" model="ir.ui.view">
+        <field name="name">quan_ly.cong_viec.search</field>
+        <field name="model">quan_ly.cong_viec</field>
+        <field name="arch" type="xml">
+            <search string="Tìm kiếm Công việc">
+                <field name="ten_cong_viec"/>
+                <field name="ma_cong_viec"/>
+                <field name="nguoi_thuc_hien_id"/>
+                <separator/>
+                <filter string="Cần làm ngay" name="priority_high" domain="[('do_uu_tien', 'in', ('2', '3'))]"/>
+                <filter string="Đang thực hiện" name="doing" domain="[('trang_thai', '=', 'dang_lam')]"/>
+                <filter string="Đã hoàn thành" name="done" domain="[('trang_thai', '=', 'hoan_thanh')]"/>
+                <group expand="0" string="Gom nhóm theo">
+                    <filter string="Người phụ trách" name="group_user" context="{'group_by': 'nguoi_thuc_hien_id'}"/>
+                    <filter string="Trạng thái" name="group_status" context="{'group_by': 'trang_thai'}"/>
+                    <filter string="Độ khó" name="group_difficulty" context="{'group_by': 'do_kho'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_quan_ly_cong_viec_btl" model="ir.actions.act_window">
+        <field name="name">Danh mục Công việc</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">quan_ly.cong_viec</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_quan_ly_cong_viec_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Chưa có công việc nào được tạo!
+            </p>
+            <p>
+                Hãy tạo các đầu việc tại đây để module Quản lý Dự án có thể sử dụng.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_quan_ly_cong_viec_root" 
+              name="Quản lý Công việc" 
+              action="action_quan_ly_cong_viec_btl" 
+              sequence="20"/>
+
+</odoo>

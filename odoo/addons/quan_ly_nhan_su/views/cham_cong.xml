@@ -1,0 +1,43 @@
+<odoo>
+    <record id="view_cham_cong_tree" model="ir.ui.view">
+        <field name="name">cham.cong.tree</field>
+        <field name="model">quan_ly.cham_cong</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="trang_thai in ('di_muon','ve_som')" decoration-success="trang_thai=='tang_ca'">
+                <field name="ngay_cham"/>
+                <field name="nhan_vien_id"/>
+                <field name="gio_vao"/>
+                <field name="gio_ra"/>
+                <field name="tong_gio_lam"/>
+                <field name="tien_thuong"/>
+                <field name="tien_phat"/>
+                <field name="trang_thai"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_cham_cong_form" model="ir.ui.view">
+        <field name="name">cham.cong.form</field>
+        <field name="model">quan_ly.cham_cong</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="nhan_vien_id"/>
+                        <field name="ngay_cham"/>
+                    </group>
+                    <group col="4">
+                        <field name="gio_vao"/>
+                        <field name="gio_ra"/>
+                    </group>
+                    <group string="Kết quả">
+                        <field name="tong_gio_lam"/>
+                        <field name="trang_thai"/>
+                        <field name="tien_thuong"/>
+                        <field name="tien_phat"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+*******************************************************************************
+* Học phần: Thực tập CNTT7 - Khoa CNTT - DNU                                 *
+* Đề tài: Kiến trúc ERP điều hành dự án 1000 tỷ (DNU-Enterprise)              *
+* File: Giao diện người dùng (User Interface XML)                             *
+* Phối màu: Luxury Gold, Deep Black & Corporate Red                           *
+*******************************************************************************
+-->
+<odoo>
+    <data>
+
+        <!-- ===================================================================
+             1. SEARCH VIEW (BỘ LỌC CHIẾN LƯỢC)
+        ==================================================================== -->
+        <record id="view_quan_ly_du_an_search" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.search</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <search string="Tìm kiếm Dự án">
+                    <field name="ten_du_an" string="Dự án/Mã số" filter_domain="['|', ('ten_du_an', 'ilike', self), ('ma_du_an', 'ilike', self)]"/>
+                    <field name="truong_du_an_id" string="Quản lý trưởng (PM)"/>
+                    <field name="loai_du_an"/>
+                    
+                    <separator/>
+                    <filter string="Dự án ưu tiên cao" name="urgent" domain="[('do_uu_tien', 'in', ('2', '3'))]"/>
+                    <filter string="Dự án đang chạy" name="active_projects" domain="[('trang_thai', 'in', ('nhap','trien_khai','tam_dung','tre_han'))]"/>
+                    <filter string="Cảnh báo trễ hạn" name="overdue" domain="[('trang_thai', '=', 'tre_han')]"/>
+                    
+                    <separator/>
+                    <group expand="0" string="Gom nhóm theo">
+                        <filter string="Project Manager" name="group_pm" context="{'group_by': 'truong_du_an_id'}"/>
+                        <filter string="Trạng thái" name="group_status" context="{'group_by': 'trang_thai'}"/>
+                        <filter string="Mức độ ưu tiên" name="group_priority" context="{'group_by': 'do_uu_tien'}"/>
+                    </group>
+                    
+                    <!-- Search Panel trái (Chuẩn Odoo 15 Enterprise) -->
+                    <searchpanel>
+                        <field name="loai_du_an" icon="fa-briefcase" enable_counters="1" title="Loại hình"/>
+                        <field name="trang_thai" icon="fa-dashboard" enable_counters="1" title="Tình trạng"/>
+                    </searchpanel>
+                </search>
+            </field>
+        </record>
+
+
+        <!-- ===================================================================
+             2. KANBAN VIEW (QUẢN TRỊ THẺ LUXURY)
+        ==================================================================== -->
+        <record id="view_quan_ly_du_an_kanban" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.kanban</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <kanban default_group_by="trang_thai" class="o_kanban_small_column" quick_create="false" sample="1">
+                    <field name="id"/>
+                    <field name="ten_du_an"/>
+                    <field name="ma_du_an"/>
+                    <field name="truong_du_an_id"/>
+                    <field name="ngay_ket_thuc"/>
+                    <field name="tien_do_tong_the"/>
+                    <field name="do_uu_tien"/>
+                    <field name="color"/>
+                    <field name="so_luong_thanh_vien"/>
+                    
+                    <templates>
+                        <t t-name="kanban-box">
+                            <div t-attf-class="oe_kanban_color_#{kanban_getcolor(record.color.raw_value)} oe_kanban_global_click oe_kanban_card d-flex flex-column" 
+                                 style="border-left: 5px solid #b22222; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                <div class="oe_kanban_content">
+                                    <div class="o_kanban_record_top">
+                                        <div class="o_kanban_record_headings">
+                                            <strong class="o_kanban_record_title" style="font-size: 1.2em; color: #1a1a1a;">
+                                                <field name="ten_du_an"/>
+                                            </strong>
+                                        </div>
+                                        <field name="do_uu_tien" widget="priority"/>
+                                    </div>
+
+                                    <div class="text-muted mt-1" style="font-size: 0.9em;">
+                                        <i class="fa fa-barcode text-danger" title="Mã số"/> <field name="ma_du_an"/>
+                                    </div>
+                                    <div class="text-dark font-weight-bold" style="font-size: 0.9em;">
+                                        <i class="fa fa-user-circle text-warning" title="PM"/> <field name="truong_du_an_id"/>
+                                    </div>
+                                    
+                                    <!-- Thanh tiến độ nổi bật -->
+                                    <div class="mt-3">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="small font-weight-bold">Hoàn thành:</span>
+                                            <span class="small font-weight-bold"><t t-esc="Math.round(record.tien_do_tong_the.raw_value)"/>%</span>
+                                        </div>
+                                        <field name="tien_do_tong_the" widget="progressbar" options="{'max_value': 100}"/>
+                                    </div>
+                                </div>
+
+                                <div class="oe_kanban_footer mt-auto pt-2 border-top">
+                                    <div class="o_kanban_record_bottom d-flex align-items-center justify-content-between">
+                                        <div class="oe_kanban_bottom_left">
+                                            <span class="badge badge-pill badge-warning" title="Thành viên tham gia">
+                                                <i class="fa fa-users"/> <field name="so_luong_thanh_vien"/>
+                                            </span>
+                                            <field name="activity_ids" widget="kanban_activity"/>
+                                        </div>
+                                        <div class="oe_kanban_bottom_right">
+                                            <field name="trang_thai" widget="label_selection" 
+                                                   options="{'classes': {'hoan_thanh': 'success', 'tre_han': 'danger', 'trien_khai': 'info', 'nhap': 'default'}}"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </templates>
+                </kanban>
+            </field>
+        </record>
+
+
+        <!-- ===================================================================
+             3. TREE VIEW (BẢNG BIỂU ĐIỀU HÀNH)
+        ==================================================================== -->
+        <record id="view_quan_ly_du_an_tree" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.tree</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <tree string="Dự án chiến lược" 
+                      decoration-info="trang_thai == 'trien_khai'" 
+                      decoration-success="trang_thai == 'hoan_thanh'" 
+                      decoration-danger="trang_thai == 'tre_han'"
+                      decoration-warning="trang_thai == 'tam_dung'"
+                      multi_edit="1" sample="1">
+                    
+                    <field name="ma_du_an" string="ID"/>
+                    <field name="ten_du_an" string="Tên dự án chủ trì"/>
+                    <field name="truong_du_an_id" string="Project Manager"/>
+                    <field name="ngay_bat_dau" string="Khởi công" optional="show"/>
+                    <field name="ngay_ket_thuc" string="Hạn chót" optional="show"/>
+                    
+                    <!-- KPI hiển thị trực tiếp -->
+                    <field name="tong_so_viec" string="Công việc" sum="Tổng cộng việc"/>
+                    <field name="tien_do_tong_the" string="Tiến độ" widget="progressbar" avg="1"/>
+                    <field name="ngan_sach_du_kien" string="Ngân sách" sum="1" widget="monetary"/>
+                    
+                    <field name="trang_thai" widget="badge" 
+                           decoration-info="trang_thai == 'trien_khai'" 
+                           decoration-success="trang_thai == 'hoan_thanh'"
+                           decoration-danger="trang_thai == 'tre_han'"/>
+                    <field name="do_uu_tien" widget="priority" optional="show"/>
+                </tree>
+            </field>
+        </record>
+
+
+        <!-- ===================================================================
+             4. FORM VIEW (TRUNG TÂM ĐIỀU HÀNH DỰ ÁN 1000 TỶ)
+        ==================================================================== -->
+        <record id="view_quan_ly_du_an_form" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.form</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <form string="Hồ sơ Quản trị Dự án">
+                    <!-- Header: Thanh quy trình nghiệp vụ -->
+                    <header>
+                        <button name="action_start_project" string="Kích hoạt triển khai" 
+                                type="object" class="oe_highlight btn-success" icon="fa-play"
+                                attrs="{'invisible': [('trang_thai', '!=', 'nhap')]}"/>
+                        
+                        <button name="action_finish_project" string="Xác nhận nghiệm thu" 
+                                type="object" class="oe_highlight btn-primary" icon="fa-trophy"
+                                attrs="{'invisible': [('trang_thai', 'not in', ('trien_khai', 'tre_han'))]}"/>
+                        
+                        <button name="action_reset_to_draft" string="Đưa về bản thảo" 
+                                type="object" icon="fa-undo"
+                                attrs="{'invisible': [('trang_thai', 'in', ('nhap', 'huy'))]}"/>
+                                
+                        <button name="action_cancel_project" string="Hủy bỏ dự án" 
+                                type="object" class="btn-danger" icon="fa-ban"
+                                attrs="{'invisible': [('trang_thai', 'in', ('hoan_thanh', 'huy'))]}"
+                                confirm="Bạn có chắc chắn muốn hủy dự án chiến lược này không?"/>
+
+                        <field name="trang_thai" widget="statusbar" statusbar_visible="nhap,trien_khai,hoan_thanh"/>
+                    </header>
+
+                    <sheet>
+                        <!-- Stat Buttons: Nút thống kê thông minh ở đầu trang -->
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" type="object" name="action_view_tasks" icon="fa-tasks">
+                                <div class="o_stat_info">
+                                    <field name="so_viec_hoan_thanh" class="o_stat_value"/>
+                                    <span class="o_stat_text">Việc xong</span>
+                                </div>
+                            </button>
+                            <button class="oe_stat_button" icon="fa-users" title="Đội ngũ">
+                                <div class="o_stat_info">
+                                    <field name="so_luong_thanh_vien" class="o_stat_value"/>
+                                    <span class="o_stat_text">Thành viên</span>
+                                </div>
+                            </button>
+                            <button class="oe_stat_button" icon="fa-money" title="Tài chính">
+                                <div class="o_stat_info">
+                                    <span class="o_stat_value"><field name="ty_le_ngan_sach" widget="integer"/>%</span>
+                                    <span class="o_stat_text">Vốn đã dùng</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Ribbon đặc biệt -->
+                        <widget name="web_ribbon" title="DỰ ÁN VÀNG" bg_color="bg-gold" attrs="{'invisible': [('danh_gia_sau_du_an', '!=', 'xuat_sac')]}"/>
+                        <widget name="web_ribbon" title="HOÀN TẤT" bg_color="bg-success" attrs="{'invisible': [('trang_thai', '!=', 'hoan_thanh')]}"/>
+
+                        <div class="oe_title">
+                            <label for="ten_du_an" string="DỰ ÁN CHIẾN LƯỢC FIT-DNU"/>
+                            <h1>
+                                <field name="ten_du_an" placeholder="Ví dụ: Triển khai Trung tâm Dữ liệu DNU..."/>
+                            </h1>
+                            <div class="d-flex align-items-center mt-2">
+                                <span class="badge badge-danger mr-2" style="padding: 8px 12px; font-size: 14px;">Mã số: <field name="ma_du_an"/></span>
+                                <field name="do_uu_tien" widget="priority" class="ml-2"/>
+                            </div>
+                            <div class="mt-4 border-top pt-3">
+                                <label for="tien_do_tong_the" string="Chỉ số hoàn thành kế hoạch tổng quát"/>
+                                <field name="tien_do_tong_the" widget="progressbar" style="height: 30px;"/>
+                            </div>
+                        </div>
+
+                        <group>
+                            <group string="CẤU TRÚC QUẢN TRỊ" name="mgmt_group">
+                                <field name="truong_du_an_id" string="Giám đốc dự án (PM)" options="{'no_create': True, 'no_open': True}"/>
+                                <field name="thanh_vien_ids" string="Biệt đội triển khai" widget="many2many_tags" options="{'color_field': 'color', 'no_create_edit': True}"/>
+                                <field name="loai_du_an" widget="radio" options="{'horizontal': true}" string="Hình thức"/>
+                                <field name="active" invisible="1"/>
+                            </group>
+
+                            <group string="THỜI GIAN &amp; TÀI CHÍNH" name="finance_group">
+                                <label for="ngay_bat_dau" string="Thời gian chạy"/>
+                                <div class="o_row">
+                                    <field name="ngay_bat_dau" class="oe_inline"/> <span class="mx-2">đến</span> <field name="ngay_ket_thuc" class="oe_inline text-danger font-weight-bold"/>
+                                </div>
+                                <field name="ngay_nghiem_thu" string="Thời điểm nghiệm thu" attrs="{'invisible': [('ngay_nghiem_thu', '=', False)]}"/>
+                                <separator string="Kiểm soát dòng tiền" class="mt-3"/>
+                                <field name="ngan_sach_du_kien" widget="monetary" options="{'currency_field': 'currency_id'}" string="Tổng mức đầu tư"/>
+                                <field name="chi_phi_thuc_te" widget="monetary" options="{'currency_field': 'currency_id'}" string="Vốn đã chi" decoration-danger="chi_phi_thuc_te &gt; ngan_sach_du_kien"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+                            <!-- PHÂN CÔNG -->
+                            <page string="Kế hoạch Phân công" name="tasks" icon="fa-tasks">
+                                <field name="dong_cong_viec_ids">
+                                    <tree editable="bottom" decoration-danger="is_late == True" decoration-success="trang_thai_viec == 'done'">
+                                        <field name="is_late" invisible="1"/>
+                                        <field name="cong_viec_id" string="Đầu việc bốc từ thư viện" options="{'no_create': True, 'no_open': True}"/>
+                                        <field name="nhan_vien_id" string="Nhân sự thực hiện" options="{'no_create': True}"/>
+                                        <field name="ngay_deadline" string="Hạn chót"/>
+                                        <field name="trang_thai_viec" widget="selection" string="Tiến độ"/>
+                                        <field name="ghi_chu_rieng" string="Yêu cầu riêng của PM"/>
+                                        <control>
+                                            <create name="add_line" string="Thêm nhiệm vụ mới..."/>
+                                        </control>
+                                    </tree>
+                                </field>
+                            </page>
+
+                            <!-- CỘT MỐC -->
+                            <page string="Cột mốc chiến lược" name="milestones" icon="fa-flag">
+                                <field name="milestone_ids">
+                                    <tree editable="bottom" decoration-success="da_dat_duoc == True">
+                                        <field name="ten_cot_moc" placeholder="Ví dụ: Hoàn tất móng tòa nhà..."/>
+                                        <field name="ngay_du_kien" string="Dự kiến hoàn thành"/>
+                                        <field name="da_dat_duoc" string="Đã đạt được" widget="boolean_toggle"/>
+                                        <field name="ghi_chu" string="Thuyết minh mốc"/>
+                                    </tree>
+                                </field>
+                            </page>
+
+                            <!-- RỦI RO -->
+                            <page string="Quản trị Rủi ro" name="risks" icon="fa-exclamation-triangle">
+                                <field name="risk_ids">
+                                    <tree decoration-danger="muc_do == '3'" decoration-warning="muc_do == '2'" decoration-info="muc_do == '1'">
+                                        <field name="ten_rui_ro" string="Tên rủi ro tiềm ẩn"/>
+                                        <field name="muc_do" widget="priority" string="Mức độ ảnh hưởng"/>
+                                        <field name="phuong_an_xu_ly" string="Phương án xử lý dự phòng"/>
+                                        <field name="trang_thai" widget="badge" string="Tình trạng"/>
+                                    </tree>
+                                </field>
+                            </page>
+
+                            <!-- DASHBOARD BI -->
+                            <page string="KPI Dashboard &amp; BI" name="dashboard" icon="fa-pie-chart">
+                                <group>
+                                    <group string="Hiệu suất vận hành thực tế">
+                                        <field name="tong_so_viec" string="Tổng khối lượng việc"/>
+                                        <field name="so_viec_hoan_thanh" string="Việc đã đóng hồ sơ"/>
+                                        <field name="tien_do_tong_the" widget="gauge" 
+                                               style="width:200px;height:150px;cursor:pointer;"
+                                               options="{'max_field': '100'}">Tiến độ (%)</field>
+                                    </group>
+                                    <group string="Phân tích Tài chính BI" name="bi_finance">
+                                        <field name="ngan_sach_du_kien" string="Định mức đầu tư"/>
+                                        <field name="chi_phi_thuc_te" string="Vốn đã chi"/>
+                                        <label for="ty_le_ngan_sach" string="Tỷ lệ giải ngân (%)"/>
+                                        <field name="ty_le_ngan_sach" widget="progressbar" decoration-danger="ty_le_ngan_sach &gt; 100"/>
+                                        <div class="alert alert-danger mt-2" attrs="{'invisible': [('chi_phi_thuc_te', '&lt;=', 'ngan_sach_du_kien')]}">
+                                            <strong>Cảnh báo Giáo sư:</strong> Chi phí thực tế đã vượt định mức ngân sách phê duyệt!
+                                        </div>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <!-- THUYẾT MINH -->
+                            <page string="Thuyết minh dự án" name="desc" icon="fa-file-text-o">
+                                <field name="mo_ta_du_an" widget="html" placeholder="Thuyết minh dự án chi tiết tại đây..."/>
+                                <group string="Chỉ thị Quản trị Dự án">
+                                    <field name="ghi_chu_quan_tri" nolabel="1" placeholder="Các ghi chú đặc biệt dành cho PM..."/>
+                                    <field name="danh_gia_sau_du_an" string="Phân loại sau dự án"/>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+
+                    <!-- Chatter: Hệ thống thảo luận và lịch sử biến động -->
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers"/>
+                        <field name="activity_ids" widget="mail_activity"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+
+        <!-- ===================================================================
+             5. BÁO CÁO BI ĐA CHIỀU (Pivot - Graph - Calendar)
+        ==================================================================== -->
+        <record id="view_quan_ly_du_an_pivot" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.pivot</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <pivot string="Phân tích Dự án BI">
+                    <field name="truong_du_an_id" type="row"/>
+                    <field name="trang_thai" type="col"/>
+                    <field name="tien_do_tong_the" type="measure"/>
+                    <field name="ngan_sach_du_kien" type="measure"/>
+                </pivot>
+            </field>
+        </record>
+
+        <record id="view_quan_ly_du_an_graph" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.graph</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <graph string="Thống kê Tiến độ Dự án" type="bar" sample="1">
+                    <field name="truong_du_an_id"/>
+                    <field name="tien_do_tong_the" type="measure"/>
+                </graph>
+            </field>
+        </record>
+
+        <record id="view_quan_ly_du_an_calendar" model="ir.ui.view">
+            <field name="name">quan_ly.du_an.calendar</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="arch" type="xml">
+                <calendar string="Lịch trình bàn giao" 
+                          date_start="ngay_bat_dau" 
+                          date_stop="ngay_ket_thuc" 
+                          color="truong_du_an_id" 
+                          mode="month"
+                          quick_add="False">
+                    <field name="ten_du_an"/>
+                    <field name="truong_du_an_id" avatar_field="image_128"/>
+                    <field name="trang_thai"/>
+                    <field name="tien_do_tong_the" widget="integer"/>
+                </calendar>
+            </field>
+        </record>
+
+
+        <!-- ===================================================================
+             6. ACTION & MENU SYSTEM (HỆ THỐNG ĐIỀU HƯỚNG)
+        ==================================================================== -->
+        <record id="action_quan_ly_du_an_btl" model="ir.actions.act_window">
+            <field name="name">Trung tâm Điều hành Dự án</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">quan_ly.du_an</field>
+            <!-- Kích hoạt 7 chế độ xem đồng thời -->
+            <field name="view_mode">kanban,tree,form,pivot,graph,calendar,activity</field>
+            <field name="search_view_id" ref="view_quan_ly_du_an_search"/>
+            <field name="context">{'search_default_active_projects': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">Bắt đầu kỷ nguyên Quản trị Dự án 1000 tỷ!</p>
+                <p>Khởi tạo dự án đầu tiên của bạn để bốc đầu việc, gán nhân sự và theo dõi tài chính chuyên sâu.</p>
+            </field>
+        </record>
+
+        <!-- Hệ thống Menu phân cấp -->
+        <menuitem id="menu_du_an_root_btl" 
+                  name="QUẢN TRỊ DỰ ÁN" 
+                  sequence="1"/>
+
+        <!-- Nhóm Menu: Hoạt động chính -->
+        <menuitem id="menu_project_operations" 
+                  name="Hoạt động dự án" 
+                  parent="menu_du_an_root_btl" 
+                  sequence="10"/>
+        
+        <menuitem id="menu_du_an_main_list" 
+                  name="Danh sách Dự án" 
+                  parent="menu_project_operations" 
+                  action="action_quan_ly_du_an_btl" 
+                  sequence="10"/>
+                  
+        <menuitem id="menu_task_library_link" 
+                  name="Thư viện Công việc mẫu" 
+                  parent="menu_project_operations" 
+                  action="quan_ly_cong_viec.action_quan_ly_cong_viec_btl" 
+                  sequence="20"/>
+
+        <!-- Nhóm Menu: Báo cáo & Phân tích BI -->
+        <menuitem id="menu_project_reporting_bi" 
+                  name="Báo cáo &amp; Phân tích" 
+                  parent="menu_du_an_root_btl" 
+                  sequence="20"/>
+                  
+        <menuitem id="menu_report_progress_graph" 
+                  name="Thống kê Tiến độ BI" 
+                  parent="menu_project_reporting_bi" 
+                  action="action_quan_ly_du_an_btl" 
+                  sequence="10"/>
+                  
+        <menuitem id="menu_report_budget_pivot" 
+                  name="Phân tích tài chính BI" 
+                  parent="menu_project_reporting_bi" 
+                  action="action_quan_ly_du_an_btl" 
+                  sequence="20"/>
+
+        <!-- Nhóm Menu: Cấu hình hệ thống -->
+        <menuitem id="menu_project_config_root" 
+                  name="Cấu hình hệ thống" 
+                  parent="menu_du_an_root_btl" 
+                  groups="base.group_system" 
+                  sequence="30"/>
+
+    </data>
+</odoo>

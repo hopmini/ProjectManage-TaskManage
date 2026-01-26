@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_quan_ly_du_an_line_all,quan_ly.du_an.line.all,model_quan_ly_du_an_line,base.group_user,1,1,1,1
+access_quan_ly_du_an_all,quan_ly.du_an.all,model_quan_ly_du_an,base.group_user,1,1,1,1
+access_quan_ly_du_an_milestone,quan_ly.du_an.milestone,model_quan_ly_du_an_milestone,base.group_user,1,1,1,1
+access_quan_ly_du_an_risk,quan_ly.du_an.risk,model_quan_ly_du_an_risk,base.group_user,1,1,1,1

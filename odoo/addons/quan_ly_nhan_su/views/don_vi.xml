@@ -1,0 +1,49 @@
+<odoo>
+    <data>
+        <record id="view_don_vi_tree" model="ir.ui.view">
+            <field name="name">don.vi.tree</field>
+            <field name="model">quan_ly.don_vi</field>
+            <field name="arch" type="xml">
+                <tree string="Danh sách Đơn vị">
+                    <field name="ma_don_vi"/>
+                    <field name="name"/>
+                    <field name="mo_ta"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="view_don_vi_form" model="ir.ui.view">
+            <field name="name">don.vi.form</field>
+            <field name="model">quan_ly.don_vi</field>
+            <field name="arch" type="xml">
+                <form string="Thông tin Đơn vị">
+                    <sheet>
+                        <div class="oe_title">
+                            <label for="name" class="oe_edit_only"/>
+                            <h1><field name="name" placeholder="Ví dụ: Phòng Kỹ thuật"/></h1>
+                        </div>
+                        <group>
+                            <group>
+                                <field name="ma_don_vi" placeholder="Ví dụ: P01"/>
+                            </group>
+                            <group>
+                                <field name="mo_ta" placeholder="Mô tả chức năng nhiệm vụ..."/>
+                            </group>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+        
+        <record id="view_don_vi_search" model="ir.ui.view">
+            <field name="name">don.vi.search</field>
+            <field name="model">quan_ly.don_vi</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="name"/>
+                    <field name="ma_don_vi"/>
+                </search>
+            </field>
+        </record>
+    </data>
+</odoo>

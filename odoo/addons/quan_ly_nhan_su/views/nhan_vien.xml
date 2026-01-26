@@ -1,0 +1,35 @@
+<odoo>
+    <record id="view_nhan_vien_form" model="ir.ui.view">
+        <field name="name">nhan.vien.form</field>
+        <field name="model">quan_ly.nhan_vien</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="ma_nv"/>
+                        <field name="don_vi_id"/>
+                    </group>
+                    <group string="Lương &amp; Chế độ">
+                        <field name="luong_co_ban"/>
+                        <field name="ngay_cong_chuan"/>
+                        <field name="phu_cap_mac_dinh"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_nhan_vien_tree" model="ir.ui.view">
+        <field name="name">nhan.vien.tree</field>
+        <field name="model">quan_ly.nhan_vien</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="ma_nv"/>
+                <field name="name"/>
+                <field name="don_vi_id"/>
+                <field name="luong_co_ban"/>
+            </tree>
+        </field>
+    </record>
+</odoo>

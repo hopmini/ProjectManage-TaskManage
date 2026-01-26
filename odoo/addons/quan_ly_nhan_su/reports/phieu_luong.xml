@@ -1,0 +1,131 @@
+<odoo>
+    <record id="action_report_phieu_luong" model="ir.actions.report">
+        <field name="name">In Phiếu Lương</field>
+        <field name="model">quan_ly.tinh_luong</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">quan_ly_nhan_su.report_phieu_luong_template</field>
+        <field name="report_file">quan_ly_nhan_su.report_phieu_luong_template</field>
+        <field name="print_report_name">'Phieu_luong_%s_%s' % (object.thang, object.nam)</field>
+        <field name="binding_model_id" ref="model_quan_ly_tinh_luong"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_phieu_luong_template">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-family: Arial, sans-serif; font-size: 14px;">
+                        
+                        <div class="text-center mb-4">
+                            <h2 style="font-weight: bold; color: #2C3E50;">PHIẾU LƯƠNG NHÂN VIÊN</h2>
+                            <p>Tháng <span t-field="o.thang"/> Năm <span t-field="o.nam"/></p>
+                        </div>
+
+                        <div class="row mb-4" style="border: 1px solid #ddd; padding: 15px; border-radius: 5px; background-color: #f9f9f9;">
+                            <div class="col-6">
+                                <strong>Mã nhân viên:</strong> <span t-field="o.nhan_vien_id.ma_nv"/><br/>
+                                <strong>Họ và tên:</strong> <span t-field="o.nhan_vien_id.name"/><br/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Phòng ban:</strong> <span t-field="o.nhan_vien_id.don_vi_id.name"/><br/>
+                                <strong>Ngày in:</strong> <span t-esc="context_timestamp(datetime.datetime.now()).strftime('%d/%m/%Y')"/>
+                            </div>
+                        </div>
+
+                        <table class="table table-bordered table-sm">
+                            <thead style="background-color: #E9ECEF;">
+                                <tr>
+                                    <th style="width: 60%;">Khoản mục</th>
+                                    <th class="text-right">Số tiền / Số lượng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Lương cơ bản</td>
+                                    <td class="text-right">
+                                        <span t-esc="'{:,.0f}'.format(o.luong_co_ban)"/> VNĐ
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Số ngày công thực tế</td>
+                                    <td class="text-right"><span t-field="o.so_cong_thuc_te"/> công</td>
+                                </tr>
+                                <tr>
+                                    <td>Lương theo ngày công <i>(Lương ngày x Số công)</i></td>
+                                    <td class="text-right">
+                                        <span t-esc="'{:,.0f}'.format(o.luong_mot_ngay * o.so_cong_thuc_te)"/> VNĐ
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Phụ cấp</td>
+                                    <td class="text-right text-success">
+                                        + <span t-esc="'{:,.0f}'.format(o.phu_cap)"/> VNĐ
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Thưởng</td>
+                                    <td class="text-right text-success">
+                                        + <span t-esc="'{:,.0f}'.format(o.tong_thuong)"/> VNĐ
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Phạt (Đi muộn / Về sớm)</td>
+                                    <td class="text-right text-danger">
+                                        - <span t-esc="'{:,.0f}'.format(o.tong_phat)"/> VNĐ
+                                    </td>
+                                </tr>
+                                <tr style="background-color: #D1E7DD; font-weight: bold; font-size: 16px;">
+                                    <td>THỰC LĨNH</td>
+                                    <td class="text-right">
+                                        <span t-esc="'{:,.0f}'.format(o.thuc_linh)"/> VNĐ
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="mt-4" t-if="o.chi_tiet_cong_ids">
+                            <h5>Chi tiết chấm công:</h5>
+                            <table class="table table-striped table-sm" style="font-size: 12px;">
+                                <thead>
+                                    <tr>
+                                        <th>Ngày</th>
+                                        <th>Giờ vào</th>
+                                        <th>Giờ ra</th>
+                                        <th>Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="o.chi_tiet_cong_ids" t-as="line">
+                                        <td><span t-field="line.ngay_cham"/></td>
+                                        <td><span t-esc="'{0:02.0f}:{1:02.0f}'.format(*divmod(line.gio_vao * 60, 60))"/></td>
+                                        <td><span t-esc="'{0:02.0f}:{1:02.0f}'.format(*divmod(line.gio_ra * 60, 60))"/></td>
+                                        <td>
+                                            <span t-if="line.trang_thai == 'du_cong'" class="text-success">Đủ công</span>
+                                            <span t-if="line.trang_thai == 'di_muon'" class="text-warning">Đi muộn/Về sớm</span>
+                                            <span t-if="line.trang_thai == 'tang_ca'" class="text-primary">Tăng ca</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="row mt-5">
+                            <div class="col-6 text-center">
+                                <strong>Người lập biểu</strong><br/>
+                                <i>(Ký và ghi rõ họ tên)</i>
+                                <br/><br/><br/><br/>
+                            </div>
+                            <div class="col-6 text-center">
+                                <strong>Người nhận</strong><br/>
+                                <i>(Ký và ghi rõ họ tên)</i>
+                                <br/><br/><br/><br/>
+                                <span t-field="o.nhan_vien_id.name"/>
+                            </div>
+                        </div>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
