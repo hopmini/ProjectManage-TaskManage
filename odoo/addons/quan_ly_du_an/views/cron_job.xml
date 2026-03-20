@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- CRON JOB: TỰ ĐỘNG QUÉT DỰ ÁN QUÁ HẠN -->
+        <record id="ir_cron_auto_scan_overdue_projects" model="ir.cron">
+            <field name="name">Dự án 1000 tỷ: Tự động quét trễ hạn (Hàng ngày)</field>
+            <field name="model_id" ref="model_quan_ly_du_an"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_quyet_du_an_tre_han()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="numbercall">-1</field>
+            <field name="doall" eval="False"/>
+            <!-- Mặc định chạy lúc 12h đêm nếu hệ thống bật -->
+        </record>
+    </data>
+</odoo>

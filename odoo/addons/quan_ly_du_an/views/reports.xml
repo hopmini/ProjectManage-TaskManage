@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- HÀNH ĐỘNG IN -->
+        <record id="action_report_du_an_pdf" model="ir.actions.report">
+            <field name="name">In Hồ sơ Dự án (PDF)</field>
+            <field name="model">quan_ly.du_an</field>
+            <field name="report_type">qweb-pdf</field>
+            <field name="report_name">quan_ly_du_an.report_project_template</field>
+            <field name="report_file">quan_ly_du_an.report_project_template</field>
+            <field name="print_report_name">'Ho_So_' + object.ma_du_an</field>
+            <field name="binding_model_id" ref="model_quan_ly_du_an"/>
+            <field name="binding_type">report</field>
+        </record>
+
+        <!-- TEMPLATE -->
+        <template id="report_project_template">
+            <t t-call="web.html_container">
+                <t t-foreach="docs" t-as="o">
+                    <t t-call="web.external_layout">
+                        <div class="page">
+                            <div class="text-center mb-4" style="border-bottom: 2px solid #800000; padding-bottom: 10px;">
+                                <h2 style="color: #800000;">HỒ SƠ DỰ ÁN CHIẾN LƯỢC</h2>
+                                <h4><span t-field="o.ten_du_an"/></h4>
+                            </div>
+
+                            <div class="row mt-4">
+                                <div class="col-6">
+                                    <p><strong>Mã dự án:</strong> <span t-field="o.ma_du_an"/></p>
+                                    <p><strong>Trưởng dự án (PM):</strong> <span t-field="o.truong_du_an_id"/></p>
+                                    <p><strong>Loại hình:</strong> <span t-field="o.loai_du_an"/></p>
+                                    <p><strong>Trạng thái:</strong> <span t-field="o.trang_thai"/></p>
+                                </div>
+                                <div class="col-6 text-right">
+                                    <p><strong>Ngày bắt đầu:</strong> <span t-field="o.ngay_bat_dau"/></p>
+                                    <p><strong>Hạn bàn giao:</strong> <span t-field="o.ngay_ket_thuc"/></p>
+                                    <p><strong>Ngân sách:</strong> 
+                                        <span t-field="o.ngan_sach_du_kien" 
+                                              t-options='{"widget": "monetary", "display_currency": o.env.company.currency_id}'/>
+                                    </p>
+                                    <p><strong>Tiến độ:</strong> <span t-field="o.tien_do_tong_the"/>%</p>
+                                </div>
+                            </div>
+
+                            <h5 class="mt-4 text-uppercase" style="color: #800000;">1. Danh sách công việc chi tiết</h5>
+                            <table class="table table-sm table-bordered mt-2">
+                                <thead style="background-color: #f0f0f0;">
+                                    <tr>
+                                        <th style="width: 5%;">STT</th>
+                                        <th style="width: 35%;">Tên công việc</th>
+                                        <th style="width: 25%;">Nhân sự</th>
+                                        <th style="width: 15%;">Deadline</th>
+                                        <th style="width: 20%;">Trạng thái</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-set="stt" t-value="1"/>
+                                    <tr t-foreach="o.dong_cong_viec_ids" t-as="task">
+                                        <td class="text-center"><t t-esc="stt"/></td>
+                                        <td><span t-field="task.cong_viec_id"/></td>
+                                        <td><span t-field="task.nhan_vien_id"/></td>
+                                        <td class="text-center"><span t-field="task.ngay_deadline" t-options='{"widget": "date"}'/></td>
+                                        <td class="text-center">
+                                            <span t-if="task.trang_thai_viec == 'todo'">Chờ làm</span>
+                                            <span t-if="task.trang_thai_viec == 'doing'">Đang thực hiện</span>
+                                            <span t-if="task.trang_thai_viec == 'done'">Hoàn tất</span>
+                                        </td>
+                                        <t t-set="stt" t-value="stt + 1"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div class="row mt-5">
+                                <div class="col-6 text-center">
+                                    <strong>NGƯỜI LẬP BÁO CÁO</strong><br/><br/><br/><br/>
+                                </div>
+                                <div class="col-6 text-center">
+                                    <strong>GIÁM ĐỐC DỰ ÁN DUYỆT</strong><br/><br/><br/><br/>
+                                    <span t-field="o.truong_du_an_id"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+            </t>
+        </template>
+    </data>
+</odoo>
