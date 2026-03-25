@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Line Item Kanban View (Drag and Drop) -->
+    <record id="view_quan_ly_du_an_line_kanban" model="ir.ui.view">
+        <field name="name">quan_ly.du_an.line.kanban</field>
+        <field name="model">quan_ly.du_an.line</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="trang_thai_viec" class="o_kanban_small_column">
+                <field name="id"/>
+                <field name="cong_viec_id"/>
+                <field name="nhan_vien_id"/>
+                <field name="ngay_deadline"/>
+                <field name="trang_thai_viec"/>
+                <field name="muc_do_uu_tien"/>
+                <field name="tien_do_cong_viec"/>
+                <field name="is_late"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click" style="border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; padding: 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <!-- Priority Tag -->
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                <span t-attf-style="font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; 
+                                    #{record.muc_do_uu_tien.raw_value == '3' ? 'background: #fee2e2; color: #dc2626;' : 
+                                      (record.muc_do_uu_tien.raw_value == '2' ? 'background: #ffedd5; color: #ea580c;' : 
+                                       (record.muc_do_uu_tien.raw_value == '1' ? 'background: #f0fdf4; color: #16a34a;' : 'background: #f1f5f9; color: #64748b;'))}">
+                                    <field name="muc_do_uu_tien"/>
+                                </span>
+                                <t t-if="record.is_late.raw_value">
+                                    <span style="background: #dc2626; color: #fff; font-size: 8px; font-weight: 900; padding: 2px 5px; border-radius: 4px; animation: blinker 1s linear infinite;">TRỄ HẠN</span>
+                                </t>
+                            </div>
+
+                            <!-- Task Title -->
+                            <div style="font-weight: 800; color: #0f172a; font-size: 14px; margin-bottom: 8px; line-height: 1.3;">
+                                <field name="cong_viec_id"/>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #64748b; font-weight: 700; margin-bottom: 3px;">
+                                    <span>Tiến độ</span>
+                                    <span><t t-esc="Math.round(record.tien_do_cong_viec.raw_value)"/>%</span>
+                                </div>
+                                <div style="background: #f1f5f9; height: 5px; border-radius: 10px; overflow: hidden;">
+                                    <div t-attf-style="background: #{record.trang_thai_viec.raw_value == 'done' ? '#10b981' : (record.is_late.raw_value ? '#dc2626' : '#0d9488')}; height: 100%; width: #{record.tien_do_cong_viec.raw_value}%;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Footer: Assignee & Deadline -->
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px dashed #f1f5f9;">
+                                <div style="display: flex; align-items: center; gap: 5px;">
+                                    <div style="width: 20px; height: 20px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #64748b; font-weight: 900;">
+                                        <i class="fa fa-user"/>
+                                    </div>
+                                    <span style="font-size: 11px; color: #475569; font-weight: 600;"><field name="nhan_vien_id"/></span>
+                                </div>
+                                <div style="font-size: 10px; color: #94a3b8; font-weight: 700;">
+                                    <field name="ngay_deadline"/>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Line Item Form View (FaceWorks style) -->
+    <record id="view_quan_ly_du_an_line_form" model="ir.ui.view">
+        <field name="name">quan_ly.du_an.line.form</field>
+        <field name="model">quan_ly.du_an.line</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_done" string="BÁO CÁO HOÀN THÀNH" type="object" class="btn-primary" attrs="{'invisible': [('trang_thai_viec', '=', 'done')]}" style="background: #10b981; font-weight: 700; border: none;"/>
+                    <field name="trang_thai_viec" widget="statusbar" statusbar_visible="todo,doing,done"/>
+                </header>
+                <sheet>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <div style="padding: 10px 15px; border-bottom: 2px solid #ea580c; background: #fff; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 900; color: #1e293b; font-size: 14px;"><i class="fa fa-tasks"></i> CHI TIẾT HẠNG MỤC TRIỂN KHAI</span>
+                            <div style="display: flex; gap: 5px;">
+                                <div style="width: 12px; height: 12px; background: #94a3b8; border-radius: 50%;"></div>
+                                <div style="width: 12px; height: 12px; background: #ef4444; border-radius: 50%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 20px;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="cong_viec_id" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="cong_viec_id" class="form-control" options="{'no_create': True}"/></div>
+                                    
+                                    <label for="nhan_vien_id" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="nhan_vien_id" class="form-control" options="{'no_create': True}"/></div>
+                                    
+                                    <label for="muc_do_uu_tien" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="muc_do_uu_tien" widget="priority"/></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="ngay_deadline" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="ngay_deadline" class="form-control"/></div>
+                                    
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <label for="so_gio_du_kien" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                            <div style="margin-bottom: 15px;"><field name="so_gio_du_kien" class="form-control"/></div>
+                                        </div>
+                                        <div class="col-6">
+                                            <label for="so_gio_thuc_te" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                            <div style="margin-bottom: 15px;"><field name="so_gio_thuc_te" class="form-control"/></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <label for="tien_do_cong_viec" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="tien_do_cong_viec" widget="progressbar"/></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Update Action to include Kanban -->
+    <record id="action_quan_ly_du_an_line" model="ir.actions.act_window">
+        <field name="view_mode">kanban,tree,form,pivot</field>
+    </record>
+</odoo>

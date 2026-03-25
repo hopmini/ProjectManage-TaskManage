@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="default_ai_chat_session" model="quan_ly.ai_chat">
+        <field name="name">Hỗ trợ AI Trực tuyến</field>
+        <field name="history_html">&lt;div class='chat-container'&gt;&lt;div class="ai-bubble"&gt;&lt;div class="ai-bubble-content"&gt;Chào mừng bạn đến với AI Assistant! Tôi đã sẵn sàng hỗ trợ bạn quản lý dự án. Hãy đặt câu hỏi bất kỳ.&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;</field>
+    </record>
+</odoo>

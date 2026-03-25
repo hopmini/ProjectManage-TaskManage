@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Milestone Kanban View -->
+    <record id="view_quan_ly_du_an_milestone_kanban" model="ir.ui.view">
+        <field name="name">quan_ly.du_an.milestone.kanban</field>
+        <field name="model">quan_ly.du_an.milestone</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" default_group_by="trang_thai">
+                <field name="id"/>
+                <field name="ten_cot_moc"/>
+                <field name="ngay_du_kien"/>
+                <field name="da_dat_duoc"/>
+                <field name="tien_do"/>
+                <field name="ngan_sach"/>
+                <field name="currency_id"/>
+                <field name="mau_sac"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div t-attf-class="oe_kanban_global_click" style="border-radius: 12px; border: 1px solid #e2e8f0; background: #fff; padding: 0; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                             <!-- Top color bar -->
+                            <div t-attf-class="oe_kanban_color_#{kanban_getcolor(record.mau_sac.raw_value)}" style="height: 5px; width: 100%;"></div>
+                            
+                            <div style="padding: 15px;">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <h4 style="font-weight: 800; font-size: 15px; color: #1e293b; margin: 0;">
+                                        <field name="ten_cot_moc"/>
+                                    </h4>
+                                    <field name="mau_sac" widget="color_picker"/>
+                                </div>
+                                
+                                <div style="font-size: 12px; color: #64748b; margin-bottom: 15px;">
+                                    <i class="fa fa-calendar-check-o"></i> Hạn: <field name="ngay_du_kien"/>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #f1f5f9; padding-top: 12px;">
+                                    <div>
+                                        <div style="font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Ngân sách</div>
+                                        <div style="font-weight: 700; color: #0f172a; font-size: 13px;">
+                                            <field name="ngan_sach" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Progress Circle -->
+                                    <div style="position: relative; width: 38px; height: 38px;">
+                                        <svg viewBox="0 0 36 36" style="width: 38px; height: 38px; transform: rotate(-90deg);">
+                                            <path style="fill: none; stroke: #f1f5f9; stroke-width: 3;" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                            <path t-attf-style="fill: none; stroke: #{record.da_dat_duoc.raw_value ? '#10b981' : '#0d9488'}; stroke-width: 3; stroke-dasharray: #{record.tien_do.raw_value}, 100;" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                        </svg>
+                                        <div style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size: 8px; font-weight: 900;">
+                                            <t t-esc="Math.round(record.tien_do.raw_value)"/>%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Milestone Form View (FaceWorks style) -->
+    <record id="view_quan_ly_du_an_milestone_form" model="ir.ui.view">
+        <field name="name">quan_ly.du_an.milestone.form</field>
+        <field name="model">quan_ly.du_an.milestone</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="%(action_quan_ly_du_an_milestone)d" type="action" string="QUAY LẠI" class="btn-secondary" style="background: #4a90e2; border: none; font-weight: 700;"/>
+                    <field name="da_dat_duoc" widget="boolean_button" options='{"terminology": "achieved"}'/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <label for="ten_cot_moc" string="Tên Cột Mốc Chiến Lược"/>
+                        <h1><field name="ten_cot_moc" placeholder="Ví dụ: Hoàn thành thiết kế UI/UX..."/></h1>
+                    </div>
+                    
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-top: 20px;">
+                        <div style="padding: 10px 15px; border-bottom: 2px solid #0d9488; background: #fff; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 900; color: #1e293b; font-size: 14px;"><i class="fa fa-info-circle"></i> THÔNG TIN CHI TIẾT</span>
+                            <div style="display: flex; gap: 5px;">
+                                <div style="width: 12px; height: 12px; background: #94a3b8; border-radius: 50%;"></div>
+                                <div style="width: 12px; height: 12px; background: #ef4444; border-radius: 50%;"></div>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 20px;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label for="du_an_id" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="du_an_id" class="form-control" options="{'no_open': True, 'no_create': True}"/></div>
+                                    
+                                    <label for="ngay_du_kien" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="ngay_du_kien" class="form-control"/></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="ngan_sach" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;">
+                                        <field name="ngan_sach" class="form-control" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                        <field name="currency_id" invisible="1"/>
+                                    </div>
+                                    
+                                    <label for="tien_do" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <div style="margin-bottom: 15px;"><field name="tien_do" widget="progressbar"/></div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <label for="ghi_chu" style="font-weight: 700; color: #64748b; font-size: 12px; margin-bottom: 5px;"/>
+                                    <field name="ghi_chu" placeholder="Ghi chú quan trọng về mốc này..."/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Update Action to include Kanban -->
+    <record id="action_quan_ly_du_an_milestone" model="ir.actions.act_window">
+        <field name="view_mode">kanban,tree,form</field>
+    </record>
+</odoo>

@@ -49,7 +49,7 @@ class QuanLyDuAn(models.Model):
         ('huy', 'Đã hủy')
     ], string='Trạng thái', default='nhap', tracking=True)
     do_uu_tien = fields.Selection([('0', 'Thấp'), ('1', 'Trung bình'), ('2', 'Cao'), ('3', 'Nghiêm trọng')], string='Ưu tiên', default='1', index=True)
-
+    currency_id = fields.Many2one('res.currency', string='Tiền tệ', default=lambda self: self.env.company.currency_id)
     # --- Tài chính & Tiến độ ---
     ngan_sach_du_kien = fields.Float(string='Ngân sách', default=0.0)
     chi_phi_thuc_te = fields.Float(string='Chi phí thực tế', default=0.0)
@@ -66,8 +66,8 @@ class QuanLyDuAn(models.Model):
     smart_process_flow_html = fields.Html(string="Quy trình Dự án", compute='_compute_smart_process_flow')
 
     # --- Telegram & Notifications ---
-    telegram_chat_id = fields.Char(string="Telegram Chat ID", help="ID của Chat hoặc Group Telegram", default='5707408090')
-    telegram_bot_token = fields.Char(string="Telegram Bot Token", help="Token lấy từ @BotFather", default='8752418278:AAEvsyOmhMGA65H_jhO3rODUy4k5biJ04ys')
+    telegram_chat_id = fields.Char(string="Telegram Chat ID", help="ID của Chat hoặc Group Telegram")
+    telegram_bot_token = fields.Char(string="Telegram Bot Token", help="Token lấy từ @BotFather", default=lambda self: self.env['ir.config_parameter'].sudo().get_param('quan_ly_du_an.telegram_bot_token'))
     telegram_enabled = fields.Boolean(string="Bật Telegram", default=True)
     last_alert_date = fields.Datetime(string="Ngày cảnh báo cuối")
 
@@ -79,11 +79,39 @@ class QuanLyDuAn(models.Model):
     ghi_chu_quan_tri = fields.Text(string='Ghi chú')
 
     # --- AI & Automation ---
-    ai_analysis_result = fields.Text(string="Phân tích AI", readonly=True)
-    ai_report_card_html = fields.Html(string="Thẻ báo cáo chiến lược", readonly=True)
+    ai_analysis_result = fields.Text(string="Phân tích AI", compute="_compute_ai_analysis", store=True)
+    ai_report_card_html = fields.Html(string="Thẻ báo cáo chiến lược", compute="_compute_ai_analysis", store=True)
+    ai_analysis_kanban = fields.Char(string="AI Phân tích nhanh", compute="_compute_ai_analysis_kanban")
+
+    @api.depends('tien_do_tong_the', 'trang_thai')
+    def _compute_ai_analysis_kanban(self):
+        for r in self:
+            if r.trang_thai == 'hoan_thanh':
+                r.ai_analysis_kanban = "Dự án đã hoàn tất xuất sắc."
+            elif r.tien_do_tong_the >= 80:
+                r.ai_analysis_kanban = "Tiến độ rất tốt, sắp về đích."
+            elif r.tien_do_tong_the >= 50:
+                r.ai_analysis_kanban = "Dự án đang đi đúng hướng."
+            elif r.trang_thai == 'tre_han':
+                r.ai_analysis_kanban = "Cảnh báo: Cần đẩy nhanh tiến độ ngay."
+            else:
+                r.ai_analysis_kanban = "Dự án đang trong giai đoạn đầu."
+
     tai_lieu_mau = fields.Binary(string='Hồ sơ PDF')
     ten_file_mau = fields.Char(string='Tên file')
     email_lien_he = fields.Char(string='Email liên hệ', tracking=True, default='hop13101999@gmail.com')
+    
+    # --- Advanced AI & Risk (Required by Dashboard) ---
+    risk_score = fields.Integer(string="Điểm rủi ro (0-100)", default=0)
+    risk_heatmap_html = fields.Html(string="Ma trận Rủi ro AI", compute='_compute_risk_heatmap')
+    tong_gio_thuc_te = fields.Float(string="Tổng giờ thực tế", compute="_compute_total_hours", store=True)
+    cau_hoi_ai = fields.Char(string='Câu hỏi AI')
+    cau_tra_loi_ai = fields.Text(string='Câu trả lời AI', readonly=True)
+
+    @api.depends('dong_cong_viec_ids.so_gio_thuc_te')
+    def _compute_total_hours(self):
+        for r in self:
+            r.tong_gio_thuc_te = sum(r.dong_cong_viec_ids.mapped('so_gio_thuc_te')) 
 
     @api.depends('message_ids')
     def _compute_last_update(self):
@@ -110,14 +138,17 @@ class QuanLyDuAn(models.Model):
                 r.ty_le_ngan_sach = 0.0
                 r.ty_suat_loi_nhuan = 0.0
 
-    @api.depends('dong_cong_viec_ids.trang_thai_viec')
+    @api.depends('dong_cong_viec_ids.tien_do_cong_viec', 'dong_cong_viec_ids.trang_thai_viec')
     def _compute_progress_stats(self):
         for r in self:
             lines = r.dong_cong_viec_ids
             r.tong_so_viec = len(lines)
-            done = len(lines.filtered(lambda x: x.trang_thai_viec == 'done'))
-            r.so_viec_hoan_thanh = done
-            r.tien_do_tong_the = (done / r.tong_so_viec * 100) if r.tong_so_viec > 0 else 0.0
+            r.so_viec_hoan_thanh = len(lines.filtered(lambda x: x.trang_thai_viec == 'done'))
+            if r.tong_so_viec > 0:
+                total_prog = sum(lines.mapped('tien_do_cong_viec'))
+                r.tien_do_tong_the = total_prog / r.tong_so_viec
+            else:
+                r.tien_do_tong_the = 0.0
 
     @api.depends('tien_do_tong_the', 'ty_le_ngan_sach', 'ngay_bat_dau', 'ngay_ket_thuc')
     def _compute_evm_stats(self):
@@ -134,415 +165,473 @@ class QuanLyDuAn(models.Model):
             r.spi_index = (r.tien_do_tong_the / plan_progress) if plan_progress > 0 else 1.0
             r.cpi_index = (r.tien_do_tong_the / r.ty_le_ngan_sach) if r.ty_le_ngan_sach > 0 else 1.0
 
+    @api.onchange('dong_cong_viec_ids')
+    def _onchange_dong_cong_viec_ids(self):
+        self._compute_progress_stats()
+
     @api.depends('trang_thai')
     def _compute_smart_process_flow(self):
         for r in self:
             stages = [
-                ('nhap', 'MỚI'),
-                ('tiep_nhan', 'TIẾP NHẬN'),
-                ('trien_khai', 'TRIỂN KHAI'),
-                ('hoan_thanh', 'HOÀN THÀNH')
+                ('nhap', 'Khởi tạo'),
+                ('tiep_nhan', 'Phân tích'),
+                ('trien_khai', 'Thực thi'),
+                ('hoan_thanh', 'Nghiệm thu')
             ]
             
-            html = '<div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 0; position: relative; max-width: 800px; margin: 0 auto;">'
-            # Connector Line background
-            html += '<div style="position: absolute; top: 35px; left: 10%; right: 10%; height: 2px; background: #e0e0e0; z-index: 1;"></div>'
+            html = """<div style="display: flex; align-items: center; justify-content: space-between; font-family: sans-serif; font-size: 11px; padding: 5px 0;">"""
             
             current_found = False
-            for code, name in stages:
+            for idx, (code, name) in enumerate(stages):
                 is_current = (r.trang_thai == code)
                 is_past = not is_current and not current_found and r.trang_thai not in ['nhap', 'huy']
                 if is_current: current_found = True
                 
-                # Special colors and glow
-                color = "#28a745" if (is_past or (is_current and code == 'hoan_thanh')) else "#007bff" if is_current else "#ccc"
-                glow = "box-shadow: 0 0 15px #007bff, 0 0 5px #007bff; border: 2px solid #fff;" if is_current else "border: 2px solid #fff;"
+                if is_past or (is_current and code == 'hoan_thanh'):
+                    bg_color = "#00a65a"; text_color = "#00a65a"; line_color = "#00a65a"; font_weight = "bold"
+                elif is_current:
+                    bg_color = "#dd4b39"; text_color = "#dd4b39"; line_color = "#e2e8f0"; font_weight = "bold"
+                else:
+                    bg_color = "#e2e8f0"; text_color = "#64748b"; line_color = "#e2e8f0"; font_weight = "normal"
                 
                 html += f"""
-                <div style="z-index: 2; text-align: center; width: 100px;">
-                    <div style="width: 32px; height: 32px; border-radius: 50%; background: {color}; margin: 0 auto 10px; {glow} display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; transition: all 0.3s ease;">
-                        {"✓" if is_past else "●"}
-                    </div>
-                    <div style="font-size: 11px; color: {color if is_current else '#888'}; font-weight: {'bold' if is_current else 'normal'}; text-transform: uppercase; letter-spacing: 0.5px;">{name}</div>
+                <div style="display: flex; align-items: center;">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: {bg_color}; margin-right: 6px;"></div>
+                    <span style="color: {text_color}; font-weight: {font_weight};">{name}</span>
                 </div>
                 """
-            html += '</div>'
+                if idx < len(stages) - 1:
+                    html += f'<div style="flex: 1; height: 1px; background: {line_color}; margin: 0 10px;"></div>'
+
+            html += "</div>"
             r.smart_process_flow_html = html
     
     def _call_groq_api(self, prompt, require_json=False):
-        api_key = "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"
+        api_key = self.env['ir.config_parameter'].sudo().get_param('quan_ly_du_an.groq_api_key', default="GROQ_API_KEY")
         api_url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
-        
         system_content = "Bạn là hệ thống AI phân tích dữ liệu dự án chuyên nghiệp."
-        if require_json:
-            system_content += " CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ."
-
+        if require_json: system_content += " CHỈ TRẢ VỀ DUY NHẤT JSON HỢP LỆ."
         data = {
             "model": "llama-3.3-70b-versatile", 
-            "messages": [
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt}
-            ],
+            "messages": [{"role": "system", "content": system_content}, {"role": "user", "content": prompt}],
             "temperature": 0.2 if require_json else 0.5
         }
         try:
             res = requests.post(api_url, headers=headers, json=data, timeout=30)
-            if res.status_code == 200:
-                return res.json()['choices'][0]['message']['content']
-            _logger.error(f"Groq API Error: {res.text}")
-            return f"Lỗi hệ thống: {res.text}"
-        except Exception as e:
-            return f"Lỗi kết nối: {str(e)}"
+            if res.status_code == 200: return res.json()['choices'][0]['message']['content']
+            if res.status_code == 401: return "<b>Lỗi kết nối AI (401):</b> API Key không hợp lệ. Vui lòng cấu hình key mới tại <i>Settings > Technical > System Parameters</i> (Key: <code>quan_ly_du_an.groq_api_key</code>)."
+            return f"Lỗi hệ thống AI: {res.text}"
+        except Exception as e: return f"Lỗi kết nối mạng: {str(e)}"
+
+    @api.model
+    def process_voice_command(self, project_id, text):
+        try:
+            r = self.browse(project_id)
+            if not r.exists(): return {'success': False, 'error': 'Dự án không tồn tại.'}
+            prompt = f"AI phân tích lệnh giọng nói: \"{text}\"... Trích xuất JSON ý định."
+            response = self._call_groq_api(prompt, require_json=True)
+            res_clean = response.strip().replace("```json", "").replace("```", "")
+            json_data = json.loads(res_clean)
+            action = json_data.get('action'); val = json_data.get('value')
+            if action in ['tien_do_tong_the', 'ngan_sach_du_kien', 'trang_thai', 'do_uu_tien'] and val is not None:
+                r.write({action: val})
+                return {'success': True}
+            return {'success': False, 'error': 'Không hiểu lệnh.'}
+        except Exception as e: return {'success': False, 'error': str(e)}
+
+    def action_open_pitch_deck(self):
+        self.ensure_one()
+        return {'type': 'ir.actions.act_url', 'url': f'/quan_ly_du_an/pitch_deck/{self.id}', 'target': 'new'}
 
     def action_extract_pdf(self):
-        """Trích xuất dữ liệu từ PDF"""
         for r in self:
-            if not r.tai_lieu_mau:
-                raise ValidationError("Vui lòng đính kèm tài liệu.")
-            
+            if not r.tai_lieu_mau: raise ValidationError("Vui lòng đính kèm tài liệu.")
             file_content = base64.b64decode(r.tai_lieu_mau)
             text_content = ""
-            try:
-                import PyPDF2
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
-                for page in pdf_reader.pages:
-                    extracted = page.extract_text()
-                    if extracted:
-                        text_content += extracted + "\n"
-            except ImportError:
-                 raise ValidationError("Hệ thống chưa cài đặt thư viện PyPDF2.")
-            except Exception as e:
-                raise ValidationError(f"Lỗi đọc file PDF: {str(e)}")
-
-            if not text_content.strip():
-                raise ValidationError("Không tìm thấy nội dung văn bản trong file PDF.")
-
-            prompt = f"""
-            Phân tích dữ liệu dự án từ nội dung sau và trả về JSON.
-            Cấu trúc: {{"ten_du_an": "...", "ngan_sach": 0, "pm": "...", "chuyen_gia": [], "email": "...", "ngay_bat_dau": "YYYY-MM-DD", "ngay_ket_thuc": "YYYY-MM-DD", "cong_viec": [], "mo_ta": "..."}}
             
-            Nội dung:
-            {text_content}
-            """
+            # 1. Thử đọc PDF nếu là file type pdf
+            is_pdf = (r.ten_file_mau and r.ten_file_mau.lower().endswith('.pdf'))
+            if is_pdf:
+                try:
+                    import PyPDF2
+                    import io
+                    pdf = PyPDF2.PdfReader(io.BytesIO(file_content)) if hasattr(PyPDF2, 'PdfReader') else PyPDF2.PdfFileReader(io.BytesIO(file_content))
+                    pages = pdf.pages if hasattr(pdf, 'pages') else range(pdf.getNumPages())
+                    for page in list(pages)[:5]: # Đọc 5 trang đầu
+                        text_content += page.extract_text() + "\n" if hasattr(page, 'extract_text') else page.extractText() + "\n"
+                except Exception as e:
+                    text_content = file_content.decode('utf-8', errors='ignore')
+            else:
+                text_content = file_content.decode('utf-8', errors='ignore')
+                
+            prompt = f"""Trích xuất thông tin dự án từ văn bản sau và trả về DUY NHẤT định dạng JSON với các key: 
+- 'ten_du_an' (chuỗi)
+- 'ma_du_an' (chuỗi)
+- 'ngan_sach_du_kien' (số nguyên)
+- 'tasks' (danh sách object): Các hạng mục công việc. Mỗi object có 'ten_cong_viec' (chuỗi), 'so_gio_du_kien' (số nguyên).
+- 'risks' (danh sách object): Các rủi ro tiềm ẩn. Mỗi object có 'ten_rui_ro' (chuỗi), 'muc_do' (chuỗi: '1', '2' hoặc '3'), 'phuong_an_xu_ly' (chuỗi).
+Nội dung:\n{text_content[:4000]}"""
             
+            # AI extraction logic
             response = self._call_groq_api(prompt, require_json=True)
             try:
+                import re
                 res_clean = response.strip()
-                if res_clean.startswith("```json"): res_clean = res_clean[7:]
-                elif res_clean.startswith("```"): res_clean = res_clean[3:]
-                if res_clean.endswith("```"): res_clean = res_clean[:-3]
+                json_match = re.search(r'\{.*\}', res_clean, re.DOTALL)
+                if json_match:
+                    try:
+                        json_data = json.loads(json_match.group(0))
+                    except:
+                        json_data = json.loads(res_clean.replace("```json", "").replace("```", ""))
+                else:
+                    json_data = json.loads(res_clean.replace("```json", "").replace("```", ""))
                 
-                json_data = json.loads(res_clean.strip())
+                vals = {}
+                if 'ten_du_an' in json_data and json_data['ten_du_an']: vals['ten_du_an'] = json_data['ten_du_an']
+                if 'ma_du_an' in json_data and json_data['ma_du_an']: vals['ma_du_an'] = json_data['ma_du_an']
+                if 'ngan_sach_du_kien' in json_data:
+                    try:
+                        import re
+                        num_str = re.sub(r'[^\d]', '', str(json_data['ngan_sach_du_kien']))
+                        if num_str: vals['ngan_sach_du_kien'] = float(num_str)
+                    except: pass
                 
-                with self.env.cr.savepoint():
-                    if json_data.get('ten_du_an'): r.ten_du_an = json_data['ten_du_an']
-                    if json_data.get('ngan_sach'): r.ngan_sach_du_kien = float(json_data['ngan_sach'])
-                    if json_data.get('email'): r.email_lien_he = json_data['email']
-                    if json_data.get('mo_ta'): r.mo_ta_du_an = json_data['mo_ta']
-                    if json_data.get('ngay_bat_dau'): r.ngay_bat_dau = fields.Date.to_date(json_data['ngay_bat_dau'])
-                    if json_data.get('ngay_ket_thuc'): r.ngay_ket_thuc = fields.Date.to_date(json_data['ngay_ket_thuc'])
-                    
-                    pm_name = json_data.get('pm')
-                    if pm_name:
-                        pm_record = self.env['quan_ly.nhan_vien'].sudo().search([('name', '=', pm_name)], limit=1)
-                        if not pm_record:
-                            pm_record = self.env['quan_ly.nhan_vien'].sudo().create({'name': pm_name, 'ma_nv': f"AI-{datetime.now().strftime('%M%S')}"})
-                        r.truong_du_an_id = pm_record.id
-                    
-                    if json_data.get('cong_viec'):
-                        r.dong_cong_viec_ids = [(5, 0, 0)]  # Xóa các dòng cũ
-                        task_vals = []
-                        for t_name in json_data['cong_viec']:
-                            task_record = self.env['quan_ly.cong_viec'].sudo().search([('ten_cong_viec', '=', t_name)], limit=1)
-                            if not task_record:
-                                task_record = self.env['quan_ly.cong_viec'].sudo().create({'ten_cong_viec': t_name})
-                            task_vals.append((0, 0, {
-                                'cong_viec_id': task_record.id,
-                                'nhan_vien_id': r.truong_du_an_id.id if r.truong_du_an_id else False,
-                                'ngay_deadline': r.ngay_ket_thuc or fields.Date.today()
-                            }))
-                        r.dong_cong_viec_ids = task_vals
+                # Trích xuất tasks
+                if 'tasks' in json_data and isinstance(json_data['tasks'], list):
+                    task_cmds = []
+                    for t in json_data['tasks']:
+                        name = t.get('ten_cong_viec')
+                        if not name: continue
+                        task_rec = self.env['quan_ly.cong_viec'].sudo().search([('ten_cong_viec', '=', name)], limit=1)
+                        if not task_rec: task_rec = self.env['quan_ly.cong_viec'].sudo().create({'ten_cong_viec': name})
+                        task_cmds.append((0, 0, {
+                            'cong_viec_id': task_rec.id, 
+                            'ngay_deadline': fields.Date.today(), 
+                            'so_gio_du_kien': t.get('so_gio_du_kien', 10)
+                        }))
+                    if task_cmds:
+                        # Clear old ones if needed or just append
+                        vals['dong_cong_viec_ids'] = [(5, 0, 0)] + task_cmds
+                        
+                # Trích xuất risks
+                if 'risks' in json_data and isinstance(json_data['risks'], list):
+                    risk_cmds = []
+                    for rk in json_data['risks']:
+                        name = rk.get('ten_rui_ro')
+                        if not name: continue
+                        muc_do = str(rk.get('muc_do', '1'))
+                        if muc_do not in ['1', '2', '3']: muc_do = '1'
+                        risk_cmds.append((0, 0, {
+                            'ten_rui_ro': name,
+                            'muc_do': muc_do,
+                            'phuong_an_xu_ly': rk.get('phuong_an_xu_ly', '')
+                        }))
+                    if risk_cmds:
+                        vals['risk_ids'] = [(5, 0, 0)] + risk_cmds
+                        
+                if vals:
+                    r.write(vals)
             except Exception as e:
-                _logger.error(f"AI Parse Error: {str(e)}")
-            
+                # Nếu lỗi JSON, có thể ghi log hoặc bỏ qua, vẫn chạy logic phân tích
+                pass
+                
             r.action_ai_analyze()
 
     def action_ask_chatbot(self):
-        """Truy vấn kiến thức dự án"""
         for r in self:
-            if not r.cau_hoi_ai:
-                raise ValidationError("Vui lòng nhập câu hỏi.")
-            context = f"Thông số dự án: {r.ten_du_an}, Ngân sách: {r.ngan_sach_du_kien}, Tiến độ: {r.tien_do_tong_the}%, Trạng thái: {r.trang_thai}."
-            prompt = f"{context}\nHỏi: {r.cau_hoi_ai}"
+            if not r.cau_hoi_ai: raise ValidationError("Vui lòng nhập câu hỏi.")
+            prompt = f"Dự án {r.ten_du_an}. Hỏi: {r.cau_hoi_ai}"
             r.cau_tra_loi_ai = self._call_groq_api(prompt)
 
     def action_ai_auto_planner(self):
-        """AI tự lập kế hoạch chi tiết"""
         for r in self:
-            if not r.ten_du_an or r.ten_du_an == 'Dự án mới':
-                raise ValidationError("Vui lòng nhập tên dự án.")
-            
-            prompt = f"""
-            Lập kế hoạch chi tiết cho dự án: "{r.ten_du_an}".
-            Yêu cầu trả về JSON gồm: 'milestones' (ten, ngay YYYY-MM-DD), 'tasks' (ten, mo_ta).
-            """
-            
+            if not r.ten_du_an: raise ValidationError("Nhập tên dự án.")
+            prompt = f"Lập kế hoạch cho: {r.ten_du_an}. JSON milestones, tasks."
             response = self._call_groq_api(prompt, require_json=True)
-            try:
-                res_clean = response.strip()
-                if res_clean.startswith("```json"): res_clean = res_clean[7:]
-                elif res_clean.startswith("```"): res_clean = res_clean[3:]
-                if res_clean.endswith("```"): res_clean = res_clean[:-3]
-                
-                json_data = json.loads(res_clean.strip())
-                
-                with self.env.cr.savepoint():
-                    if json_data.get('milestones'):
-                        ms_vals = [(0, 0, {'ten_cot_moc': ms['ten'], 'ngay_du_kien': fields.Date.to_date(ms['ngay'])}) for ms in json_data['milestones']]
-                        r.milestone_ids = ms_vals
-                    
-                    if json_data.get('tasks'):
-                        task_vals = []
-                        for t in json_data['tasks']:
-                            task_record = self.env['quan_ly.cong_viec'].sudo().search([('ten_cong_viec', '=', t['ten'])], limit=1)
-                            if not task_record:
-                                task_record = self.env['quan_ly.cong_viec'].sudo().create({'ten_cong_viec': t['ten'], 'mo_ta_chi_tiet': t['mo_ta']})
-                            task_vals.append((0, 0, {
-                                'cong_viec_id': task_record.id,
-                                'nhan_vien_id': r.truong_du_an_id.id if r.truong_du_an_id else False,
-                                'ngay_deadline': r.ngay_ket_thuc or fields.Date.today()
-                            }))
-                        r.dong_cong_viec_ids = task_vals
-            except Exception as e:
-                _logger.error(f"Planner Error: {str(e)}")
 
-    def action_ai_analyze(self):
-        """Đánh giá sức khỏe dự án & Tạo Thẻ báo cáo thị giác"""
+    @api.depends('tien_do_tong_the', 'trang_thai', 'risk_ids.muc_do', 'spi_index', 'cpi_index')
+    def _compute_ai_analysis(self):
         for r in self:
-            analysis = [f"BÁO CÁO PHÂN TÍCH - {datetime.now().strftime('%d/%m/%Y')}"]
+            analysis = [f"BÁO CÁO DỰ ÁN - {datetime.now().strftime('%d/%m/%Y')}"]
             score = 100
-            
-            # Logic tính điểm
             if r.spi_index < 0.9: score -= 20
             if r.cpi_index < 0.9: score -= 20
             if r.trang_thai == 'tre_han': score -= 10
             
-            score = max(0, min(100, score))
-            analysis.append(f"Điểm sức khỏe: {score}/100")
-            r.ai_analysis_result = "\n".join(analysis)
-
-            # --- Tạo HTML Report Card (Dành cho trình bày) ---
-            color = "#28a745" if score >= 80 else "#ffc107" if score >= 50 else "#dc3545"
-            health_text = "TỐT" if score >= 80 else "CẢNH BÁO" if score >= 50 else "NGUY CẤP"
+            # Risk impact
+            risks_high = len(r.risk_ids.filtered(lambda rk: rk.muc_do == '3'))
+            if risks_high > 0: score -= min(30, risks_high * 10)
             
-            html = f"""
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-left: 10px solid {color};">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="margin: 0; color: #333;">Dự án: {r.ten_du_an}</h2>
-                    <span style="padding: 8px 16px; border-radius: 20px; background: {color}; color: #fff; font-weight: bold; font-size: 14px;">{health_text}</span>
-                </div>
+            score = max(0, min(100, score))
+            r.risk_score = 100 - score
+            
+            if score >= 90:
+                analysis.append("Đánh giá chung: Dự án vận hành ổn định.")
+            elif score >= 70:
+                analysis.append("Đánh giá chung: Dự án duy trì tiến độ tốt.")
+            else:
+                analysis.append("Đánh giá chung: Cần điều chỉnh quản trị.")
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 12px; color: #666; text-transform: uppercase;">Điểm Sức Khỏe</div>
-                        <div style="font-size: 24px; font-weight: bold; color: {color};">{score}/100</div>
-                    </div>
-                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 12px; color: #666; text-transform: uppercase;">Chỉ số SPI</div>
-                        <div style="font-size: 24px; font-weight: bold; color: {color};">{r.spi_index:.2f}</div>
-                    </div>
-                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
-                        <div style="font-size: 12px; color: #666; text-transform: uppercase;">Chỉ số CPI</div>
-                        <div style="font-size: 24px; font-weight: bold; color: {color};">{r.cpi_index:.2f}</div>
-                    </div>
+            if risks_high > 0:
+                analysis.append(f"Cảnh báo: Có {risks_high} rủi ro cao.")
+                
+            analysis.append(f"Chỉ số tin cậy: {score}%")
+            r.ai_analysis_result = "\n".join(analysis)
+            
+            # (Thẻ báo cáo HTML logic) - Giữ nguyên và cập nhật theme theo score
+            theme = {"bg": "#ffffff", "border": "#0d9488", "text": "#0f766e", "status": "AN TOÀN MỨC 1"}
+            if score < 80: theme = {"bg": "#ffffff", "border": "#f59e0b", "text": "#b45309", "status": "CẢNH BÁO MỨC 2"}
+            if score < 50: theme = {"bg": "#ffffff", "border": "#ef4444", "text": "#b91c1c", "status": "KHẨN CẤP MỨC 3"}
+            
+            r.ai_report_card_html = f"""
+            <div style="font-family: sans-serif; padding: 15px; background: #fff; border-radius: 4px; border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px;">
+                    <h2 style="margin: 0; color: #1e293b; font-size: 14px; font-weight: 700;">BÁO CÁO: {r.ma_du_an}</h2>
+                    <div style="padding: 2px 6px; background: {theme['border']}; color: #fff; font-size: 10px; font-weight: bold; border-radius: 2px;">{theme['status']}</div>
                 </div>
-
-                <div style="margin-top: 10px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="font-size: 13px; font-weight: 600;">Tiến độ dự án</span>
-                        <span style="font-size: 13px; font-weight: 600;">{int(r.tien_do_tong_the)}%</span>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <div style="flex: 1; padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; text-align: center;">
+                        <div style="font-size: 10px; color: #64748b; margin-bottom: 2px;">TIN CẬY</div>
+                        <div style="font-size: 24px; font-weight: 700; color: {theme['text']};">{score}/100</div>
                     </div>
-                    <div style="width: 100%; background: #eee; border-radius: 10px; height: 10px;">
-                        <div style="width: {r.tien_do_tong_the}%; background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%); height: 100%; border-radius: 10px;"></div>
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; color: #334155;">Giai đoạn: {dict(r._fields['trang_thai'].selection).get(r.trang_thai)}</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">{len(r.risk_ids)} rủi ro, {len(r.milestone_ids)} cột mốc.</div>
                     </div>
-                </div>
-
-                <div style="margin-top: 20px; font-size: 13px; color: #555; line-height: 1.6; border-top: 1px solid #eee; padding-top: 15px;">
-                    <strong>Đánh giá từ AI:</strong> Dự án đang được vận hành với các chỉ số hiệu suất ở mức {health_text.lower()}. 
-                    Hệ thống khuyến nghị tiếp tục giám sát chặt chẽ các hạng mục có rủi ro cao để đảm bảo ngân sách {r.ngan_sach_du_kien:,.0f} VNĐ được tối ưu hóa.
                 </div>
             </div>
             """
-            r.ai_report_card_html = html
+
+    def action_ai_analyze(self):
+        # Fallback if someone still calls the action button
+        self._compute_ai_analysis()
+
+    @api.depends('risk_ids.muc_do', 'risk_ids.trang_thai')
+    def _compute_risk_heatmap(self):
+        for r in self:
+            matrix = {
+                'da_xay_ra': {'3': [], '2': [], '1': []}, 
+                'dang_theo_doi': {'3': [], '2': [], '1': []}, 
+                'da_xu_ly': {'3': [], '2': [], '1': []}
+            }
+            for risk in r.risk_ids:
+                if risk.trang_thai in matrix and str(risk.muc_do) in matrix[risk.trang_thai]:
+                    matrix[risk.trang_thai][str(risk.muc_do)].append(risk)
+            
+            colors = {
+                'da_xay_ra': {'3': '#dc2626', '2': '#ef4444', '1': '#f87171'}, 
+                'dang_theo_doi': {'3': '#ea580c', '2': '#f97316', '1': '#fb923c'}, 
+                'da_xu_ly': {'3': '#0f766e', '2': '#14b8a6', '1': '#5eead4'}
+            }
+            
+            html = """<div style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h3 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 800; color: #1e293b;">Ma trận Rủi ro Chiến lược</h3>
+                <div style="display: grid; grid-template-columns: 100px 1fr 1fr 1fr; gap: 8px;">
+                    <div style="font-size: 11px; font-weight: bold; color: #64748b;">Trạng thái / Mức</div>
+                    <div style="text-align: center; font-size: 11px; font-weight: bold; color: #ef4444;">CAO (3)</div>
+                    <div style="text-align: center; font-size: 11px; font-weight: bold; color: #f59e0b;">TRUNG BÌNH (2)</div>
+                    <div style="text-align: center; font-size: 11px; font-weight: bold; color: #10b981;">THẤP (1)</div>
+            """
+            
+            rows = [
+                ('da_xay_ra', 'ĐÃ XẢY RA'),
+                ('dang_theo_doi', 'THEO DÕI'),
+                ('da_xu_ly', 'ĐÃ XỬ LÝ')
+            ]
+            
+            for row_key, row_label in rows:
+                html += f'<div style="font-size: 11px; font-weight: 700; color: #475569; display: flex; align-items: center;">{row_label}</div>'
+                for level in ['3', '2', '1']:
+                    risks = matrix[row_key][level]
+                    color = colors[row_key][level]
+                    count = len(risks)
+                    opacity = "1" if count > 0 else "0.2"
+                    html += f"""
+                        <div style="background: {color}; color: #fff; padding: 10px; border-radius: 4px; text-align: center; opacity: {opacity}; transition: all 0.3s; position: relative;">
+                            <div style="font-size: 18px; font-weight: 900;">{count}</div>
+                            <div style="font-size: 9px; font-weight: bold; opacity: 0.8;">RỦI RO</div>
+                        </div>
+                    """
+            
+            html += "</div>"
+            if not r.risk_ids:
+                html += '<div style="margin-top: 15px; font-size: 12px; color: #94a3b8; text-align: center; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 4px;">Chưa có rủi ro nào được ghi nhận.</div>'
+            html += "</div>"
+            r.risk_heatmap_html = html
 
     def action_view_workload(self):
-        """Xem biểu đồ phân bổ nguồn lực (Presentation friendly)"""
         self.ensure_one()
-        return {
-            'name': 'Phân tích Nguồn lực',
-            'type': 'ir.actions.act_window',
-            'res_model': 'quan_ly.du_an.line',
-            'view_mode': 'graph,pivot',
-            'domain': [('du_an_id', '=', self.id)],
-            'context': {
-                'search_default_nhan_vien_id': 1,
-                'graph_measure': 'id',
-                'graph_mode': 'pie',
-            }
-        }
+        return {'name': 'Phân tích Nguồn lực', 'type': 'ir.actions.act_window', 'res_model': 'quan_ly.du_an.line', 'view_mode': 'graph,pivot', 'domain': [('du_an_id', '=', self.id)]}
 
-    def action_tiep_nhan_du_an(self):
-        for r in self:
-            if not r.truong_du_an_id: raise ValidationError("Vui lòng chỉ định Trưởng dự án.")
-            r.write({'trang_thai': 'trien_khai'})
-            # Tự động gửi thông báo khi tiếp nhận
-            r.action_send_telegram_alert()
-            r.action_send_email_report()
+    def _send_telegram_msg(self, message):
+        import logging
+        _logger = logging.getLogger(__name__)
 
-    def action_tam_dung(self): self.write({'trang_thai': 'tam_dung'})
-    def action_finish_project(self): 
-        self.write({'trang_thai': 'hoan_thanh', 'ngay_nghiem_thu': date.today()})
-        # Gửi thông báo khi hoàn thành
-        self.action_send_telegram_alert()
-        self.action_send_email_report()
-    def action_reset_to_draft(self): self.write({'trang_thai': 'nhap', 'ngay_nghiem_thu': False})
-    def action_cancel_project(self): self.write({'trang_thai': 'huy'})
-    
-    def action_noop(self):
-        """Hành động trống để hỗ trợ hiển thị Stat Buttons"""
-        return True
-
-    def action_send_telegram_alert(self):
-        """Gửi cảnh báo Telegram thủ công hoặc tự động"""
-        self.ensure_one()
-        if not self.telegram_enabled or not self.telegram_chat_id:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Thông báo'),
-                    'message': _('Chưa cấu hình Telegram cho dự án này!'),
-                    'type': 'warning',
-                    'sticky': False,
-                }
-            }
+        default_token = self.env['ir.config_parameter'].sudo().get_param('quan_ly_du_an.telegram_bot_token')
+        default_chat_id = self.env['ir.config_parameter'].sudo().get_param('quan_ly_du_an.telegram_chat_id')
         
-        msg = f"🚀 <b>THÔNG BÁO DỰ ÁN</b>: {self.ten_du_an}\n"
-        msg += f"📊 Tiến độ: {int(self.tien_do_tong_the)}%\n"
-        msg += f"⚠️ Trạng thái: {dict(self._fields['trang_thai'].selection).get(self.trang_thai)}\n"
-        msg += f"🔗 <a href='http://localhost:8069/web#id={self.id}&model=quan_ly.du_an&view_type=form'>Xem tại Odoo</a>"
+        if not default_chat_id:
+            last_chat = self.env['quan_ly.du_an'].sudo().search([
+                ('telegram_chat_id', '!=', False), 
+                ('telegram_chat_id', '!=', '')
+            ], limit=1, order='id desc')
+            if last_chat: default_chat_id = last_chat.telegram_chat_id
+            
+        if not default_token:
+            last_token = self.env['quan_ly.du_an'].sudo().search([
+                ('telegram_bot_token', '!=', False), 
+                ('telegram_bot_token', '!=', '')
+            ], limit=1, order='id desc')
+            if last_token: default_token = last_token.telegram_bot_token
 
-        # 1. Gửi Telegram thật
-        if self.telegram_enabled and self.telegram_bot_token and self.telegram_chat_id:
+        for r in self:
+            tk = r.telegram_bot_token or default_token
+            cid = r.telegram_chat_id or default_chat_id
+            if not r.telegram_enabled:
+                _logger.warning("Telegram skipped: telegram_enabled is False")
+                continue
+            if not tk or not cid:
+                _logger.warning(f"Telegram skipped: missing token or chat id. tk={bool(tk)}, cid={bool(cid)}")
+                continue
             try:
                 import requests
-                url = f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
-                payload = {
-                    "chat_id": self.telegram_chat_id,
-                    "text": msg,
-                    "parse_mode": "HTML"
-                }
-                response = requests.post(url, json=payload, timeout=10)
-                if response.status_code != 200:
-                    _logger.error("Telegram API Error: %s - %s", response.status_code, response.text)
-                else:
-                    _logger.info("Telegram Sent successfully: %s", response.text)
+                url = f"https://api.telegram.org/bot{tk}/sendMessage"
+                payload = {'chat_id': cid, 'text': message, 'parse_mode': 'HTML'}
+                res = requests.post(url, json=payload, timeout=5)
+                _logger.info(f"Telegram API Response: {res.status_code} - {res.text}")
             except Exception as e:
-                _logger.error("Lỗi gửi Telegram: %s", str(e))
+                _logger.error(f"Telegram Request Error: {e}")
 
-        _logger.info("SEND TELEGRAM TO %s: %s", self.telegram_chat_id, msg)
-        self.last_alert_date = fields.Datetime.now()
+    def _build_detail_msg(self, r, title, icon):
+        from datetime import datetime
+        pm = r.truong_du_an_id.name if r.truong_du_an_id else 'Chưa gán'
+        ns = r.ngan_sach_du_kien or 0.0
         
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Telegram (Real-time)'),
-                'message': _('Tin nhắn đã được gửi thực tế tới Telegram!'),
-                'type': 'success',
-                'sticky': False,
-            }
-        }
-
-    def action_send_email_report(self):
-        """Gửi báo cáo tóm tắt qua Email"""
-        self.ensure_one()
-        if not self.email_lien_he:
-            return {
-                'type': 'ir.actions.client',
-                'tag': 'display_notification',
-                'params': {
-                    'title': _('Lỗi'),
-                    'message': _('Chưa có email liên hệ!'),
-                    'type': 'danger',
-                    'sticky': False,
-                }
-            }
+        # Calculate Progress Bar
+        p_val = min(100, max(0, int(r.tien_do_tong_the)))
+        blocks = int(p_val / 10)
+        progress_bar = ("■" * blocks) + ("□" * (10 - blocks))
         
-        # 1. Gửi Email thật
-        mail_values = {
-            'subject': f"Báo cáo Dự án: {self.ten_du_an}",
-            'body_html': f"""
-                <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee;">
-                    <h2 style="color: #007bff;">Báo cáo Dự án: {self.ten_du_an}</h2>
-                    <p><b>Tiến độ:</b> {self.tien_do_tong_the}%</p>
-                    <p><b>Trạng thái:</b> {dict(self._fields['trang_thai'].selection).get(self.trang_thai)}</p>
-                    <p><b>Ngân sách:</b> {self.ngan_sach_du_kien} VNĐ</p>
-                    <hr/>
-                    <p><i>Hệ thống quản lý dự án AI - Odoo Pro Max</i></p>
-                </div>
-            """,
-            'email_to': self.email_lien_he,
-        }
-        mail = self.env['mail.mail'].sudo().create(mail_values)
-        mail.send()
-
-        _logger.info("REAL EMAIL SENT TO %s", self.email_lien_he)
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Email (Real-time)'),
-                'message': f'Báo cáo thực tế đã được gửi tới {self.email_lien_he}',
-                'type': 'success',
-                'sticky': False,
-            }
-        }
-
-    def action_view_tasks(self):
-        self.ensure_one()
-        return {
-            'name': 'Hạng mục công việc',
-            'type': 'ir.actions.act_window',
-            'res_model': 'quan_ly.du_an.line',
-            'view_mode': 'tree,form,graph,pivot',
-            'domain': [('du_an_id', '=', self.id)],
-            'context': {'default_du_an_id': self.id},
-        }
-
-
-    def action_quick_audit(self):
-        """Kiểm định nhanh AI và hiện Notify"""
-        self.ensure_one()
-        summary = f"Dự án {self.ten_du_an} đang đạt {int(self.tien_do_tong_the)}% tiến độ. "
-        if self.spi_index < 0.9 or self.cpi_index < 0.9:
-            msg = summary + "⚠️ CẢNH BÁO: Chỉ số hiệu suất đang thấp. Cần kiểm tra ngay!"
-            notify_type = 'danger'
-        else:
-            msg = summary + "✅ Hệ thống đánh giá Dự án đang vận hành ổn định."
-            notify_type = 'success'
+        trang_thai_dict = dict(self._fields['trang_thai'].selection)
+        trang_thai_str = trang_thai_dict.get(r.trang_thai, 'N/A')
         
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('AI Quick Audit'),
-                'message': msg,
-                'type': notify_type,
-                'sticky': False,
-            }
-        }
+        now_str = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+        start_date = r.ngay_bat_dau.strftime('%Y-%m-%d') if r.ngay_bat_dau else 'N/A'
+        end_date = r.ngay_ket_thuc.strftime('%Y-%m-%d') if r.ngay_ket_thuc else 'N/A'
+        
+        msg = f"🌟 <b>BÁO CÁO CHIẾN LƯỢC DỰ ÁN</b> 🌟\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"📂 <b>Dự án:</b> {r.ten_du_an.upper() if r.ten_du_an else 'N/A'}\n"
+        msg += f"🆔 <b>Mã hồ sơ:</b> #{r.ma_du_an or 'N/A'}\n"
+        msg += f"👤 <b>Project Manager:</b> {pm}\n"
+        msg += f"🚦 <b>Trạng thái:</b> {trang_thai_str}\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━\n"
+        msg += f"📊 <b>TIẾN ĐỘ THỰC THI</b>\n"
+        msg += f"{progress_bar} {p_val}% Hoàn tất\n\n"
+        msg += f"💰 <b>CHỈ SỐ TÀI CHÍNH (VNĐ)</b>\n"
+        msg += f"• 🧱 Ngân sách: {ns:,.0f}\n"
+        msg += f"• 💸 Chi thực tế: 0\n"
+        msg += f"• ⚖️ Khả dụng: {ns:,.0f}\n\n"
+        msg += f"📅 <b>LỘ TRÌNH THỜI GIAN</b>\n"
+        msg += f"• 🛫 Bắt đầu: {start_date}\n"
+        msg += f"• 🏁 Kết thúc: {end_date}\n"
+        msg += "━━━━━━━━━━━━━━━━━━━━\n"
+        msg += "🔗 <i>Xem trực tuyến trên Odoo Cloud</i>\n"
+        msg += f"📅 Ghi nhận: {now_str}"
+        return msg
+
+    def action_tiep_nhan_du_an(self):
+        for r in self: 
+            r.write({'trang_thai': 'trien_khai'})
+            r._send_telegram_msg(self._build_detail_msg(r, "BẮT ĐẦU TRIỂN KHAI", "🚀"))
+
+    def action_tam_dung(self):
+        for r in self:
+            r.write({'trang_thai': 'tam_dung'})
+            r._send_telegram_msg(self._build_detail_msg(r, "DỰ ÁN TẠM DỪNG", "⏸️"))
+
+    def action_finish_project(self):
+        for r in self:
+            r.write({'trang_thai': 'hoan_thanh', 'ngay_nghiem_thu': date.today()})
+            r._send_telegram_msg(self._build_detail_msg(r, "NGHIỆM THU HOÀN THÀNH", "✅"))
+
+    def action_reset_to_draft(self):
+        for r in self:
+            r.write({'trang_thai': 'nhap'})
+            r._send_telegram_msg(self._build_detail_msg(r, "HỦY KHỞI ĐỘNG (VỀ NHÁP)", "🔄"))
+
+    def action_cancel_project(self):
+        for r in self:
+            r.write({'trang_thai': 'huy'})
+            r._send_telegram_msg(self._build_detail_msg(r, "ĐÃ HỦY DỰ ÁN", "❌"))
+
+    def action_noop(self): return True
+
+    def action_randomize_demo_data(self):
+        import random
+        from datetime import date
+        for r in self:
+            # 1. TASKS (15)
+            r.dong_cong_viec_ids = [(5, 0, 0)]
+            task_names = ["Kế hoạch tổng thể", "Phân tích yêu cầu", "Thiết kế UI/UX", "Phát triển Backend", "Giao diện Frontend", "Kiểm thử hệ thống", "Bảo mật & Network", "Tối ưu hóa DB", "Tài liệu kỹ thuật", "Đào tạo nhân sự", "Triển khai Staging", "Phản hồi khách hàng", "Sửa lỗi tồn đọng", "Kiểm toán bảo mật", "Bảo trì định kỳ"]
+            for i in range(len(task_names)):
+                task_rec = self.env['quan_ly.cong_viec'].sudo().search([('ten_cong_viec', '=', task_names[i])], limit=1)
+                if not task_rec: task_rec = self.env['quan_ly.cong_viec'].sudo().create({'ten_cong_viec': task_names[i]})
+                r.write({'dong_cong_viec_ids': [(0, 0, {
+                    'cong_viec_id': task_rec.id,
+                    'nhan_vien_id': r.truong_du_an_id.id if r.truong_du_an_id else False,
+                    'ngay_deadline': date.today(),
+                    'so_gio_du_kien': random.randint(20, 100),
+                    'so_gio_thuc_te': random.randint(5, 50),
+                    'tien_do_cong_viec': random.randint(20, 95),
+                    'trang_thai_viec': random.choice(['todo', 'doing', 'done'])
+                })]})
+
+            # 2. MILESTONES (15)
+            r.milestone_ids = [(5, 0, 0)]
+            for i in range(15):
+                r.write({'milestone_ids': [(0, 0, {
+                    'ten_cot_moc': f'Cột mốc chiến lược {i+1}',
+                    'ngay_du_kien': date.today(),
+                    'tien_do': random.randint(10, 100),
+                    'ngan_sach': random.randint(10, 500) * 1000000,
+                    'da_dat_duoc': random.choice([True, False])
+                })]})
+
+            # 3. RISKS (15)
+            r.risk_ids = [(5, 0, 0)]
+            risk_templates = ["Biến động tỉ giá", "Thiếu hụt thiết bị", "Thay đổi chính sách", "Biến động nhân sự", "Lỗi hạ tầng Cloud", "Rủi ro kỹ thuật mới", "Áp lực tài chính", "Thay đổi Scope", "Trễ Deadline", "Bản quyền phần mềm", "Vấn đề pháp lý", "Hạ tầng yếu", "Bảo mật dữ liệu", "Cạnh tranh thị trường", "Yêu cầu khách hàng"]
+            for i in range(len(risk_templates)):
+                r.write({'risk_ids': [(0, 0, {
+                    'ten_rui_ro': risk_templates[i],
+                    'muc_do': random.choice(['1', '2', '3']),
+                    'trang_thai': random.choice(['dang_theo_doi', 'da_xay_ra', 'da_xu_ly']),
+                    'phuong_an_xu_ly': 'Đã có kế hoạch xử lý dự phòng.'
+                })]})
+            
+            # 4. Trigger AI & Analysis
+            r._compute_ai_analysis()
+            r._compute_risk_heatmap()
+            
+        return {'type': 'ir.actions.client', 'tag': 'display_notification', 'params': {
+            'title': 'Dữ liệu Demo', 
+            'message': 'Đã nạp 15 hồ sơ mẫu. AI đã hoàn tất phân tích!', 
+            'type': 'success',
+            'sticky': False
+        }}
+
+    def action_send_telegram_alert(self):
+        for r in self:
+            msg = f"<b>Thông báo Dự án: {r.ten_du_an}</b>\n"
+            msg += f"Tiến độ: {round(r.tien_do_tong_the, 1)}%\n"
+            msg += f"Ngân sách: {r.ngan_sach_du_kien:,.0f} VND"
+            r._send_telegram_msg(msg)
+    def action_send_email_report(self): pass
+    def action_view_tasks(self): pass
+    def action_view_milestones(self): pass
+    def action_view_resources(self): pass
+    def action_quick_audit(self): pass
 
 class QuanLyDuAnLine(models.Model):
     _name = 'quan_ly.du_an.line'
@@ -554,15 +643,21 @@ class QuanLyDuAnLine(models.Model):
     trang_thai_viec = fields.Selection([('todo', 'Chờ xử lý'), ('doing', 'Đang thực hiện'), ('done', 'Hoàn tất')], string='Trạng thái', default='todo')
     ghi_chu_rieng = fields.Char(string='Ghi chú')
     is_late = fields.Boolean(string='Trễ hạn', compute='_compute_is_late')
+    muc_do_uu_tien = fields.Selection([('0', 'Thấp'), ('1', 'Trung bình'), ('2', 'Cao'), ('3', 'Rất gấp')], string='Cấp độ ưu tiên', default='1')
+    so_gio_du_kien = fields.Float(string='Giờ dự kiến', default=1.0)
+    so_gio_thuc_te = fields.Float(string='Giờ thực tế', default=0.0)
+    tien_do_cong_viec = fields.Float(string='Tiến độ (%)', default=0.0)
+
+    @api.onchange('so_gio_du_kien', 'so_gio_thuc_te')
+    def _onchange_hours(self):
+        if self.so_gio_du_kien > 0: self.tien_do_cong_viec = min(round((self.so_gio_thuc_te / self.so_gio_du_kien) * 100, 1), 100.0)
+
+    def action_done(self): self.write({'trang_thai_viec': 'done', 'so_gio_thuc_te': self.so_gio_du_kien})
 
     @api.depends('ngay_deadline', 'trang_thai_viec')
     def _compute_is_late(self):
         today = date.today()
         for line in self: line.is_late = bool(line.ngay_deadline and line.ngay_deadline < today and line.trang_thai_viec != 'done')
-
-    @api.onchange('cong_viec_id')
-    def _onchange_task(self):
-        if self.cong_viec_id and self.cong_viec_id.nguoi_thuc_hien_id: self.nhan_vien_id = self.cong_viec_id.nguoi_thuc_hien_id
 
 class QuanLyDuAnMilestone(models.Model):
     _name = 'quan_ly.du_an.milestone'
@@ -572,6 +667,15 @@ class QuanLyDuAnMilestone(models.Model):
     ngay_du_kien = fields.Date(string='Ngày dự kiến', required=True)
     da_dat_duoc = fields.Boolean(string='Đạt được', default=False)
     ghi_chu = fields.Text(string='Ghi chú')
+    tien_do = fields.Float(string='Tiến độ (%)', default=0.0)
+    ngan_sach = fields.Monetary(string='Ngân sách mục tiêu')
+    currency_id = fields.Many2one('res.currency', related='du_an_id.currency_id')
+    mau_sac = fields.Integer(string='Màu sắc thẻ', default=0)
+    trang_thai = fields.Selection([('pending', 'Chưa đạt'), ('done', 'Đã đạt')], string='Trạng thái', compute='_compute_trang_thai', store=True)
+
+    @api.depends('da_dat_duoc')
+    def _compute_trang_thai(self):
+        for r in self: r.trang_thai = 'done' if r.da_dat_duoc else 'pending'
 
 class QuanLyDuAnRisk(models.Model):
     _name = 'quan_ly.du_an.risk'

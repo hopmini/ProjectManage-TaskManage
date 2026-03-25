@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="pitch_deck_template" name="Project Pitch Deck">
+        <t t-call="web.layout">
+            <t t-set="head">
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+                <title>Pitch Deck - <t t-esc="project.ten_du_an"/></title>
+                <!-- Reveal.js core CSS -->
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reset.min.css"/>
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css"/>
+                <!-- FaceWorks Theme Colors mapped to Reveal.js Theme -->
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/black.min.css" id="theme"/>
+                <!-- Add custom FaceWorks styling over reveal -->
+                <style>
+                    .reveal .slides { text-align: left; }
+                    .reveal h1, .reveal h2, .reveal h3 { 
+                        color: #00a65a; 
+                        text-transform: uppercase; 
+                        font-weight: bold; 
+                    }
+                    .text-highlight { color: #dd4b39; font-weight: bold; }
+                    .stat-box { 
+                        background: rgba(255,255,255,0.1); 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        border: 2px solid #00a65a;
+                        text-align: center;
+                    }
+                    .stat-value { font-size: 2em; color: #00a65a; font-weight: bold; }
+                    .progress-container { width: 100%; background: #333; border-radius: 5px; }
+                    .progress-bar { height: 20px; background: #00a65a; border-radius: 5px; transition: width 1s ease-in-out; }
+                </style>
+            </t>
+
+            <div class="reveal">
+                <div class="slides">
+                    <!-- Slide 1: Welcome / Title -->
+                    <section>
+                        <h2>BÁO CÁO CẬP NHẬT DỰ ÁN</h2>
+                        <h1><t t-esc="project.ten_du_an"/></h1>
+                        <p><strong>Mã dự án:</strong> <t t-esc="project.ma_du_an"/></p>
+                        <p><strong>Chủ nhiệm / Quản lý:</strong> <t t-esc="project.truong_du_an_id.name if project.truong_du_an_id else 'Chưa phân công'"/></p>
+                        <br/>
+                        <p style="font-size: 0.5em; color: #888;">Hệ thống AI Report Pitch Deck tự động (FaceWorks Clone)</p>
+                    </section>
+
+                    <!-- Slide 2: Progress & Financials -->
+                    <section>
+                        <h2>TIẾN ĐỘ &amp; TÀI CHÍNH</h2>
+                        <div style="display: flex; gap: 20px; justify-content: space-between; margin-top: 40px;">
+                            <div class="stat-box" style="flex: 1;">
+                                <div>TIẾN ĐỘ HOÀN THÀNH</div>
+                                <div class="stat-value"><t t-esc="round(project.tien_do_tong_the, 2)"/>%</div>
+                                <div class="progress-container" style="margin-top: 10px;">
+                                    <div class="progress-bar" t-attf-style="width: #{project.tien_do_tong_the}%;"></div>
+                                </div>
+                            </div>
+                            <div class="stat-box" style="flex: 1; border-color: #dd4b39;">
+                                <div style="color: #dd4b39;">TỶ LỆ TIÊU HAO NGÂN SÁCH</div>
+                                <div class="stat-value" style="color: #dd4b39;"><t t-esc="round(project.ty_le_ngan_sach, 2)"/>%</div>
+                                <div class="progress-container" style="margin-top: 10px;">
+                                    <div class="progress-bar" t-attf-style="width: #{project.ty_le_ngan_sach}%; background: #dd4b39;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 30px; font-size: 0.8em;">
+                            <p><strong>Tổng Ngân Sách Dự Kiến:</strong> <span class="text-highlight"><t t-esc="project.ngan_sach_du_kien"/> VND</span></p>
+                            <p><strong>Hệ số Rủi Ro Nhận Diện AI:</strong> <t t-esc="project.risk_score"/>/100</p>
+                        </div>
+                    </section>
+
+                    <!-- Slide 3: AI Analysis -->
+                    <section t-if="project.ai_analysis_result">
+                        <h2>TÓM TẮT CHIẾN LƯỢC BỞI AI</h2>
+                        <div style="font-size: 0.6em; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border-left: 5px solid #00a65a; max-height: 500px; overflow-y: auto; text-align: left;">
+                            <pre style="white-space: pre-wrap; font-family: inherit; color: #eee; margin: 0;"><t t-esc="project.ai_analysis_result"/></pre>
+                        </div>
+                    </section>
+                    
+                    <!-- Slide 4: EVM Indicators -->
+                    <section>
+                        <h2>CHỈ SỐ HIỆU SUẤT EVM</h2>
+                        <div style="display: flex; gap: 20px; justify-content: space-between; margin-top: 40px;">
+                            <div class="stat-box" style="flex: 1;">
+                                <div>CHỈ SỐ TIẾN ĐỘ (SPI)</div>
+                                <div class="stat-value"><t t-esc="round(project.spi_index, 2)"/></div>
+                                <p style="font-size: 0.5em; color: #aaa;">> 1.0 (Vượt tiến độ), &lt; 1.0 (Trễ tiến độ)</p>
+                            </div>
+                            <div class="stat-box" style="flex: 1;">
+                                <div>CHỈ SỐ CHI PHÍ (CPI)</div>
+                                <div class="stat-value"><t t-esc="round(project.cpi_index, 2)"/></div>
+                                <p style="font-size: 0.5em; color: #aaa;">> 1.0 (Tiết kiệm), &lt; 1.0 (Bội chi)</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Slide 5: Thank you -->
+                    <section>
+                        <h2 style="color: #00a65a;">XIN CẢM ƠN!</h2>
+                        <p>Dữ liệu trích xuất theo thời gian thực (Real-time).</p>
+                    </section>
+                </div>
+            </div>
+
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.js"></script>
+            <script>
+                Reveal.initialize({
+                    hash: true,
+                    slideNumber: 'c/t',
+                    transition: 'slide'
+                });
+            </script>
+        </t>
+    </template>
+</odoo>

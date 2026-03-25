@@ -1,0 +1,202 @@
+<odoo>
+    <!-- 1. ACTIONS -->
+    
+    <!-- SERVER ACTION: Global Dashboard -->
+    <record id="action_quan_ly_dashboard_global" model="ir.actions.server">
+        <field name="name">Bảng điều hành Tổng thể</field>
+        <field name="model_id" ref="model_quan_ly_dashboard"/>
+        <field name="state">code</field>
+        <field name="code">action = model.open_dashboard()</field>
+    </record>
+
+    <!-- SERVER ACTION: Project Portal -->
+    <record id="action_quan_ly_du_an_portal" model="ir.actions.server">
+        <field name="name">Hồ sơ Dự án</field>
+        <field name="model_id" ref="model_quan_ly_dashboard"/>
+        <field name="state">code</field>
+        <field name="code">action = model.open_project_portal()</field>
+    </record>
+    
+    <!-- Action: Cột mốc -->
+    <record id="action_quan_ly_du_an_milestone" model="ir.actions.act_window">
+        <field name="name">Cột mốc chiến lược</field>
+        <field name="res_model">quan_ly.du_an.milestone</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Chưa có cột mốc nào được tạo.</p>
+        </field>
+    </record>
+
+    <!-- Action: Hạng mục công việc -->
+    <record id="action_quan_ly_du_an_line" model="ir.actions.act_window">
+        <field name="name">Hạng mục triển khai</field>
+        <field name="res_model">quan_ly.du_an.line</field>
+        <field name="view_mode">tree,form,pivot</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Chưa có hạng mục công việc nào.</p>
+        </field>
+    </record>
+
+    <!-- Action: Rủi ro -->
+    <record id="action_quan_ly_du_an_risk" model="ir.actions.act_window">
+        <field name="name">Quản trị Rủi ro</field>
+        <field name="res_model">quan_ly.du_an.risk</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Hãy thiết lập các rủi ro tiềm ẩn.</p>
+        </field>
+    </record>
+
+    <!-- Action: Vấn đề / Issue -->
+    <record id="action_quan_ly_du_an_issue" model="ir.actions.act_window">
+        <field name="name">Vấn đề &amp; Phát sinh</field>
+        <field name="res_model">quan_ly.du_an.issue</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Các sự cố phát sinh sẽ hiển thị ở đây.</p>
+        </field>
+    </record>
+
+    <!-- Action: Kiểm định -->
+    <record id="action_quan_ly_du_an_quality" model="ir.actions.act_window">
+        <field name="name">Kiểm định Chất lượng</field>
+        <field name="res_model">quan_ly.du_an.quality</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Báo cáo kiểm định chất lượng dự án.</p>
+        </field>
+    </record>
+
+    <!-- Action: Tài nguyên -->
+    <record id="action_quan_ly_du_an_resource" model="ir.actions.act_window">
+        <field name="name">Trang thiết bị &amp; Vật tư</field>
+        <field name="res_model">quan_ly.du_an.resource</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Quản lý các nguồn lực vật lý của dự án.</p>
+        </field>
+    </record>
+
+    <!-- Action: Bên liên quan -->
+    <record id="action_quan_ly_du_an_stakeholder" model="ir.actions.act_window">
+        <field name="name">Các đối tác &amp; Stakeholders</field>
+        <field name="res_model">quan_ly.du_an.stakeholder</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Danh sách các bên liên quan trực tiếp.</p>
+        </field>
+    </record>
+
+    <!-- Action: Tài liệu -->
+    <record id="action_quan_ly_du_an_document" model="ir.actions.act_window">
+        <field name="name">Thư viện Tài liệu</field>
+        <field name="res_model">quan_ly.du_an.document</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Kho lưu trữ tài liệu kỹ thuật và pháp lý.</p>
+        </field>
+    </record>
+
+    <!-- Action: Nhân sự -->
+    <record id="action_quan_ly_nhan_vien_active" model="ir.actions.act_window">
+        <field name="name">Hồ sơ Nhân sự</field>
+        <field name="res_model">quan_ly.nhan_vien</field>
+        <field name="view_mode">kanban,tree,form</field>
+    </record>
+
+    <!-- 2. MENU HIERARCHY -->
+
+    <!-- ROOT -->
+    <menuitem id="menu_quan_ly_du_an_root" name="QUẢN TRỊ" sequence="1"/>
+
+    <!-- 2.1 HỆ THỐNG -->
+    <menuitem id="menu_cluster_he_thong" 
+              name="HỆ THỐNG" 
+              parent="menu_quan_ly_du_an_root" 
+              sequence="10"/>
+    <menuitem id="menu_child_dashboard" 
+              name="Bàn làm việc (Dashboard)" 
+              parent="menu_cluster_he_thong" 
+              action="action_quan_ly_dashboard_global"
+              sequence="1"/>
+    <menuitem id="menu_child_ai_chat" 
+              name="AI Chat" 
+              parent="menu_cluster_he_thong" 
+              action="action_quan_ly_ai_chat"
+              sequence="2"/>
+
+    <!-- 2.2 DỰ ÁN -->
+    <menuitem id="menu_cluster_du_an" 
+              name="DỰ ÁN" 
+              parent="menu_quan_ly_du_an_root" 
+              sequence="20"/>
+    <menuitem id="menu_child_du_an_hoso" 
+              name="Hồ sơ Dự án" 
+              parent="menu_cluster_du_an" 
+              action="action_quan_ly_du_an"
+              sequence="1"/>
+    <menuitem id="menu_child_du_an_milestone" 
+              name="Cột mốc chiến lược" 
+              parent="menu_cluster_du_an" 
+              action="action_quan_ly_du_an_milestone"
+              sequence="2"/>
+    <menuitem id="menu_child_du_an_line" 
+              name="Hạng mục triển khai" 
+              parent="menu_cluster_du_an" 
+              action="action_quan_ly_du_an_line"
+              sequence="3"/>
+
+    <!-- 2.3 VẬN HÀNH -->
+    <menuitem id="menu_cluster_van_hanh" 
+              name="VẬN HÀNH" 
+              parent="menu_quan_ly_du_an_root" 
+              sequence="30"/>
+    <menuitem id="menu_child_van_hanh_issue" 
+              name="Vấn đề &amp; Phát sinh" 
+              parent="menu_cluster_van_hanh" 
+              action="action_quan_ly_du_an_issue"
+              sequence="1"/>
+    <menuitem id="menu_child_van_hanh_risk" 
+              name="Quản trị Rủi ro" 
+              parent="menu_cluster_van_hanh" 
+              action="action_quan_ly_du_an_risk"
+              sequence="2"/>
+    <menuitem id="menu_child_van_hanh_quality" 
+              name="Kiểm định Chất lượng" 
+              parent="menu_cluster_van_hanh" 
+              action="action_quan_ly_du_an_quality"
+              sequence="3"/>
+
+    <!-- 2.4 TÀI NGUYÊN -->
+    <menuitem id="menu_cluster_tai_nguyen" 
+              name="TÀI NGUYÊN" 
+              parent="menu_quan_ly_du_an_root" 
+              sequence="40"/>
+    <menuitem id="menu_child_tai_nguyen_nhan_su" 
+              name="Đội ngũ Nhân sự" 
+              parent="menu_cluster_tai_nguyen" 
+              action="action_quan_ly_nhan_vien_active"
+              sequence="1"/>
+    <menuitem id="menu_child_tai_nguyen_vattu" 
+              name="Trang thiết bị &amp; Vật tư" 
+              parent="menu_cluster_tai_nguyen" 
+              action="action_quan_ly_du_an_resource"
+              sequence="2"/>
+    <menuitem id="menu_child_tai_nguyen_stakeholder" 
+              name="Bên liên quan" 
+              parent="menu_cluster_tai_nguyen" 
+              action="action_quan_ly_du_an_stakeholder"
+              sequence="3"/>
+
+    <!-- 2.5 TÀI LIỆU -->
+    <menuitem id="menu_cluster_tai_lieu" 
+              name="TÀI LIỆU" 
+              parent="menu_quan_ly_du_an_root" 
+              sequence="50"/>
+    <menuitem id="menu_child_tai_lieu_library" 
+              name="Thư viện Dự án" 
+              parent="menu_cluster_tai_lieu" 
+              action="action_quan_ly_du_an_document"
+              sequence="1"/>
+
+</odoo>

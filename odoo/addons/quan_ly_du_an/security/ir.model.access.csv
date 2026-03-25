@@ -3,3 +3,10 @@ access_quan_ly_du_an_line_all,quan_ly.du_an.line.all,model_quan_ly_du_an_line,ba
 access_quan_ly_du_an_all,quan_ly.du_an.all,model_quan_ly_du_an,base.group_user,1,1,1,1
 access_quan_ly_du_an_milestone,quan_ly.du_an.milestone,model_quan_ly_du_an_milestone,base.group_user,1,1,1,1
 access_quan_ly_du_an_risk,quan_ly.du_an.risk,model_quan_ly_du_an_risk,base.group_user,1,1,1,1
+access_quan_ly_du_an_resource,quan_ly.du_an.resource,model_quan_ly_du_an_resource,base.group_user,1,1,1,1
+access_quan_ly_du_an_issue,quan_ly.du_an.issue,model_quan_ly_du_an_issue,base.group_user,1,1,1,1
+access_quan_ly_du_an_stakeholder,quan_ly.du_an.stakeholder,model_quan_ly_du_an_stakeholder,base.group_user,1,1,1,1
+access_quan_ly_du_an_document,quan_ly.du_an.document,model_quan_ly_du_an_document,base.group_user,1,1,1,1
+access_quan_ly_du_an_quality,quan_ly.du_an.quality,model_quan_ly_du_an_quality,base.group_user,1,1,1,1
+access_quan_ly_dashboard,quan_ly.dashboard,model_quan_ly_dashboard,base.group_user,1,1,1,1
+access_quan_ly_ai_chat,quan_ly.ai_chat,model_quan_ly_ai_chat,base.group_user,1,1,1,1

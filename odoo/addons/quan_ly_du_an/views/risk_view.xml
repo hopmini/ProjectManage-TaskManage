@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Risk Tree View -->
+    <record id="view_quan_ly_du_an_risk_tree" model="ir.ui.view">
+        <field name="name">quan_ly.du_an.risk.tree</field>
+        <field name="model">quan_ly.du_an.risk</field>
+        <field name="arch" type="xml">
+            <tree string="Quản trị Rủi ro" decoration-danger="trang_thai == 'da_xay_ra'" decoration-warning="trang_thai == 'dang_theo_doi'" decoration-success="trang_thai == 'da_xu_ly'">
+                <field name="du_an_id"/>
+                <field name="ten_rui_ro"/>
+                <field name="muc_do" widget="priority"/>
+                <field name="trang_thai" widget="badge" decoration-danger="trang_thai == 'da_xay_ra'" decoration-warning="trang_thai == 'dang_theo_doi'" decoration-success="trang_thai == 'da_xu_ly'"/>
+                <field name="phuong_an_xu_ly"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Risk Form View -->
+    <record id="view_quan_ly_du_an_risk_form" model="ir.ui.view">
+        <field name="name">quan_ly.du_an.risk.form</field>
+        <field name="model">quan_ly.du_an.risk</field>
+        <field name="arch" type="xml">
+            <form string="Chi tiết Rủi ro">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="ten_rui_ro" placeholder="Tên rủi ro..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="du_an_id"/>
+                            <field name="muc_do" widget="priority"/>
+                        </group>
+                        <group>
+                            <field name="trang_thai" widget="radio" options="{'horizontal': true}"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Phương án xử lý" name="solution">
+                            <field name="phuong_an_xu_ly" placeholder="Mô tả chi tiết phương án ứng phó..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

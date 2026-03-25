@@ -11,6 +11,7 @@ class NhanVien(models.Model):
     
     # ===> THÊM DÒNG NÀY ĐỂ SỬA LỖI <===
     user_id = fields.Many2one('res.users', string='Tài khoản hệ thống') 
+    hinh_anh = fields.Binary(string='Hình ảnh')
     # ==================================
 
     luong_co_ban = fields.Float(string='Lương cơ bản', default=5000000)
